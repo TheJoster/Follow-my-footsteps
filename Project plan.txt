@@ -1,0 +1,164 @@
+Plan: Unity 2D Hex-Based RPG with Scalable Simulation Architecture
+Build a production-quality 2D hex-grid game featuring player-controlled actions, autonomous NPC ecosystems (hostile/friendly/neutral), dynamic trap placement, terrain modification, quest/trading systems, and simulation speed control. Architecture designed for mobile deployment with chunked world streaming, optimized for 50+ NPCs, and extensible to large procedural worlds.
+
+Phase 1: Foundation & Core Systems (Weeks 1-3)
+Step 1.1 - Initialize Unity 2022.3 LTS project with mobile-optimized settings, create .gitignore for Unity, establish folder structure in Assets/_Project/ following Unity standards, configure TextMesh Pro, Universal Render Pipeline for 2D mobile performance
+
+Step 1.2 - Implement hex coordinate foundation with HexCoord.cs struct using axial system, HexMetrics.cs static utilities for pointy-top orientation, coordinate-to-world position conversion, neighbor calculation with direction enum, distance/range algorithms, and unit tests in Tests/EditMode/HexCoordTests.cs
+
+Step 1.3 - Build chunk-based grid system with HexGrid.cs managing chunks, HexChunk.cs for 16x16 cell groups, HexCell.cs storing terrain/occupancy/events using bitwise flags, implement chunk pooling for world streaming, add grid query methods (GetCell, GetNeighbors, GetCellsInRange)
+
+Step 1.4 - Create rendering system with HexRenderer.cs using sprite instancing, placeholder hex sprites (6 unique colors for terrain types), implement frustum culling per chunk, add GridVisualizer.cs for debug mode showing coordinates/cell states, establish sorting layers for terrain/entities/UI
+
+Step 1.5 - Implement ScriptableObject data architecture with TerrainType.cs SO defining movement costs/build permissions, EntityDefinition.cs abstract base for all entity data, create example terrain types (Grass, Water, Mountain, Forest, Desert, Snow) as SO assets in Assets/_Project/ScriptableObjects/TerrainTypes/
+
+Commits: ~8-10 commits (hex math struct → tests → chunk system → rendering → SO setup → terrain data)
+
+Phase 2: Player & Basic Interaction (Weeks 4-5)
+Step 2.1 - Implement input abstraction layer with IInputProvider.cs interface, MouseKeyboardInput.cs for PC testing, TouchInput.cs for mobile, InputManager.cs singleton translating inputs to hex coordinates, support click-to-move and camera pan
+
+Step 2.2 - Build player system with PlayerController.cs MonoBehaviour, PlayerData.cs serializable save data, PlayerDefinition.cs SO for stats, implement grid position tracking, basic movement validation (terrain walkability, bounds checking), player sprite rendering with sorting
+
+Step 2.3 - Create camera controller HexCameraController.cs with smooth following of player using Cinemachine virtual camera, implement zoom limits for mobile usability, add optional drag-to-pan (disabled during player turn), restrict camera bounds to active chunks
+
+Step 2.4 - Implement turn-based simulation core with SimulationManager.cs managing turn order, ITurnEntity.cs interface for player/NPCs, player action → NPC update cycle, add simulation state enum (PlayerTurn, NPCTurn, Processing), emit TurnEvent.cs ScriptableObject events
+
+Commits: ~6-8 commits (input abstraction → player controller → camera → turn system → integration tests)
+
+Phase 3: Pathfinding & Entity Movement (Weeks 6-7)
+Step 3.1 - Implement A* pathfinding with IPathfinder.cs interface, AStarPathfinder.cs using priority queue, PathRequest.cs struct with start/goal/settings, implement cube coordinate distance heuristic, terrain cost modifiers from TerrainType SOs, write comprehensive PathfindingTests.cs
+
+Step 3.2 - Create asynchronous pathfinding manager PathfindingManager.cs using coroutines for multi-frame calculation, implement request queue with priority system, add path caching with invalidation on grid changes, expose max calculations per frame setting for mobile performance tuning
+
+Step 3.3 - Build movement system with MovementController.cs component handling path following, implement lerp-based hex-to-hex movement with configurable speed, add movement events for animation triggers, validate each step (occupancy/terrain changes), handle path recalculation on obstacles
+
+Step 3.4 - Extend player with pathfinding by integrating MovementController, implement click-to-move showing path preview (dotted line renderer), display movement range (reachable cells highlighted), add movement cost UI showing action points/stamina depletion
+
+Commits: ~7-9 commits (A* core → tests → async manager → movement controller → player integration → path visualization)
+
+Phase 4: NPC Foundation & State Machine (Weeks 8-10)
+Step 4.1 - Create NPC data architecture with NPCDefinition.cs SO defining stats/behavior/loot, NPCRuntimeData.cs serializable state, NPCController.cs MonoBehaviour orchestrating NPC logic, implement NPC spawning system in EntityFactory.cs with object pooling
+
+Step 4.2 - Build hierarchical state machine with IState.cs interface, StateMachine.cs generic manager, implement initial states: IdleState.cs for friendly NPCs, PatrolState.cs with waypoint system, ChaseState.cs for hostile NPCs detecting player in range
+
+Step 4.3 - Implement perception system with PerceptionComponent.cs using range-based queries with LayerMask filtering, add vision cone calculation for directional awareness, implement memory system tracking last known player position, use spatial hashing for efficient NPC-to-NPC/player queries
+
+Step 4.4 - Create NPC turn execution in SimulationManager with time-sliced updates (5-10 NPCs per frame), implement action priority system (movement/attack/ability use), add NPC decision-making based on current state, ensure deterministic turn order for save/load consistency
+
+Step 4.5 - Build initial NPC types as SO assets: friendly villager (idle/wander), hostile goblin (patrol/chase), neutral trader (idle), implement 3-5 example NPCs with unique placeholder sprites, test spawning in test scene with mixed behaviors
+
+Commits: ~10-12 commits (NPC data → state machine → states → perception → turn integration → NPC definitions → spawn testing)
+
+Phase 5: Combat & Interaction Systems (Weeks 11-12)
+Step 5.1 - Implement combat foundation with CombatSystem.cs handling damage calculation, HealthComponent.cs tracking HP/max HP/armor, AttackAbility.cs base class for attack actions, add attack range checking, implement turn-based attack queue
+
+Step 5.2 - Create player combat with PlayerCombatController.cs extending player, implement click-to-attack showing valid targets, add damage types and resistance system (physical/magical/elemental), display combat feedback UI (damage numbers, health bars), emit CombatEvent.cs SO events
+
+Step 5.3 - Implement NPC combat behaviors with AttackState.cs for hostile NPCs, FleeState.cs when health low, add aggro/threat system for target selection, implement different attack patterns per NPC type (melee/ranged), add death handling with loot drop
+
+Step 5.4 - Build interaction system with IInteractable.cs interface, InteractionController.cs managing player interactions, implement context-sensitive UI showing available actions (talk/trade/attack/collect), add interaction radius with visual indicator
+
+Commits: ~8-10 commits (combat core → player combat → NPC combat → interaction system → UI integration → testing)
+
+Phase 6: Environmental Objects & Events (Weeks 13-14)
+Step 6.1 - Create environmental object foundation with EnvironmentObject.cs abstract base, EnvironmentObjectDefinition.cs SO, implement types: Collectible.cs, Trap.cs, Trigger.cs, add placement system in HexCell supporting multiple objects per cell
+
+Step 6.2 - Implement event system with CellEvent.cs abstract SO, concrete events: TrapEvent (damage on enter), CollectibleEvent (add to inventory), TriggerEvent (emit custom event), add one-time vs repeatable flag, implement event execution on cell entry/exit
+
+Step 6.3 - Build dynamic trap placement for NPC foes with TrapPlacementAbility.cs, implement skill/resource requirements, add trap inventory system for NPCs, create trap visibility rules (hidden until triggered/detected), add trap types (spike/poison/net) as SOs
+
+Step 6.4 - Implement collectibles system with InventoryComponent.cs managing items, ItemDefinition.cs SO for all item types, create loot table system LootTable.cs for random drops, add collectible spawning on NPC death or in world placement
+
+Commits: ~8-9 commits (env objects base → event types → trap placement → collectibles → inventory → loot tables → integration)
+
+Phase 7: Building & Terrain Modification (Weeks 15-16)
+Step 7.1 - Implement build mode with BuildController.cs activating on player input, BuildableDefinition.cs SO defining structures (walls/towers/roads), add terrain type restrictions, implement resource cost system, show buildable preview (ghost sprite)
+
+Step 7.2 - Create construction system with Construction.cs component tracking build progress, implement time-based building (simulation ticks to complete), add partial construction states with visual feedback, allow construction cancellation with resource refund
+
+Step 7.3 - Implement terrain modification with TerrainModifier.cs allowing terrain type changes (flatten mountain, bridge water), add tool/resource requirements, create modification preview showing before/after, update pathfinding when terrain changes, invalidate cached paths
+
+Step 7.4 - Build resource management with ResourceInventory.cs tracking wood/stone/gold, implement resource gathering from environment (trees/rocks), add resource display UI, create resource cost validation for building/crafting
+
+Commits: ~7-8 commits (build mode → construction → terrain mod → resources → UI → pathfinding integration)
+
+Phase 8: Quest & Trading Systems (Weeks 17-19)
+Step 8.1 - Implement quest foundation with Quest.cs SO defining objectives/rewards/prerequisites, QuestObjective.cs abstract base, concrete types: KillObjective, CollectObjective, BuildObjective, ExploreObjective
+
+Step 8.2 - Create quest manager QuestManager.cs tracking active/completed quests, implement quest state machine (available/active/completed/failed), add objective progress tracking with events, create quest UI panel showing objectives/progress
+
+Step 8.3 - Build NPC quest giver system with QuestGiverComponent.cs on friendly NPCs, implement dialogue system showing available quests, add quest turn-in interaction, implement prerequisite checking (level/items/previous quests completed)
+
+Step 8.4 - Implement trading system with MerchantComponent.cs on friendly NPCs, create shop inventory (buy/sell items), implement dynamic pricing with reputation modifiers, add trade UI showing merchant stock/player gold, create merchant stock refresh system
+
+Step 8.5 - Add NPC ally system with AllyController.cs for quest-recruited NPCs, implement follow behavior state, add ally combat assistance, create ally command system (stay/follow/attack), persist ally relationships in save data
+
+Commits: ~10-12 commits (quest foundation → objectives → quest manager → quest givers → trading → shop UI → ally system)
+
+Phase 9: Simulation Speed & Observation (Week 20)
+Step 9.1 - Implement simulation speed control in SimulationManager with time scale multiplier (0.5x, 1x, 2x, 5x, 10x), add pause functionality preserving turn state, create UI controls (pause/play/fast-forward buttons), ensure physics/pathfinding scale with time
+
+Step 9.2 - Build observation mode allowing player to watch without acting, implement free-roam camera extension unlocking pan/zoom while paused, add timeline scrubbing for reviewing past turns (optional feature), create spectator mode for watching NPC ecosystem evolve
+
+Step 9.3 - Optimize for simulation speed with profiler-identified bottlenecks, batch NPC updates where possible, implement LOD system (distant NPCs update less frequently), add option to limit active NPC count dynamically based on performance
+
+Commits: ~5-6 commits (time control → pause system → free camera → observation mode → optimizations)
+
+Phase 10: Advanced NPC Ecosystem (Weeks 21-23)
+Step 10.1 - Implement NPC skill progression with SkillSystem.cs tracking trap-making/combat/crafting skills, add XP gain from actions, create skill level thresholds unlocking abilities, tie trap placement to skill requirements
+
+Step 10.2 - Build NPC-to-NPC interaction with faction system FactionDefinition.cs SO, implement reputation between factions (hostile/neutral/friendly), add NPC combat against each other, create territorial behavior (patrol/defend zones)
+
+Step 10.3 - Implement ecosystem behaviors with EcosystemManager.cs spawning prey/predator NPCs, add resource gathering NPCs (woodcutters/miners), create settlement building by NPC groups, implement trade routes between NPC merchants
+
+Step 10.4 - Add ambient life behaviors with random events (merchant caravan passing, NPC conversations), implement day/night cycle affecting NPC schedules, create weather system impacting pathfinding costs, add seasonal events
+
+Commits: ~9-11 commits (skill system → factions → NPC interactions → ecosystem manager → ambient behaviors → schedules)
+
+Phase 11: Save/Load & Persistence (Week 24)
+Step 11.1 - Implement serialization architecture with GameSaveData.cs containing all serializable state, create SaveLoadManager.cs with JSON or binary serialization, add save version migration system, implement auto-save on turn intervals
+
+Step 11.2 - Serialize grid state with GridData.cs storing terrain changes/constructions/events, implement chunk streaming save (only modified chunks), add entity serialization EntityData.cs with factory reconstruction pattern
+
+Step 11.3 - Save player/quest/inventory state with PlayerSaveData.cs, persist quest progress/objectives, serialize NPC relationships/reputation, save ally/companion states, implement multiple save slot system with metadata (timestamp, location, playtime)
+
+Step 11.4 - Implement cloud save integration (optional) using platform services (Google Play Games/Game Center), add save conflict resolution, create save file validation, implement corrupted save recovery
+
+Commits: ~7-9 commits (save architecture → grid serialization → entity save → player save → cloud integration → testing)
+
+Phase 12: Mobile Optimization & Polish (Weeks 25-26)
+Step 12.1 - Optimize rendering with sprite atlasing, implement texture compression for mobile, batch draw calls, add mobile graphics quality settings, profile and optimize garbage collection
+
+Step 12.2 - Optimize touch input with gesture recognition (pinch-to-zoom, two-finger pan), add touch-friendly UI scaling, implement context menus for touch, ensure all interactions work without keyboard
+
+Step 12.3 - Implement chunk streaming fully with async loading/unloading based on camera position, add loading screen for large world transitions, create seamless chunk transitions, test with large procedurally generated worlds
+
+Step 12.4 - Add visual polish with sprite animations (idle/walk/attack), particle effects (trap trigger, combat hits, collection sparkles), screen shake on events, HP bar animations, death animations
+
+Step 12.5 - Performance testing with 50+ NPCs active, profile pathfinding bottlenecks, optimize NPC perception queries, implement aggressive object pooling, add performance metrics overlay for testing
+
+Commits: ~10-12 commits (rendering optimization → touch input → chunk streaming → animations → particles → performance testing)
+
+Phase 13: Testing & Documentation (Week 27)
+Step 13.1 - Write comprehensive unit tests for grid math, pathfinding, combat calculations, quest logic, serialization, achieve 80%+ coverage per claude.md standards
+
+Step 13.2 - Create play mode integration tests for player movement, NPC AI behaviors, combat scenarios, quest completion flows, save/load round-trips
+
+Step 13.3 - Update KeyLibraries.md with Unity version, packages used, ScriptableObject patterns, populate all sections with actual dependencies
+
+Step 13.4 - Write comprehensive README with setup instructions, architecture overview, folder structure guide, development workflow, how to add new content (NPCs/quests/items)
+
+Commits: ~8-10 commits (unit tests → integration tests → KeyLibraries update → README → code documentation)
+
+Further Considerations
+Procedural World Generation: Phase 1-3 architected for it, but implementation deferred. Should we plan a Phase 14 for procedural terrain/biome generation using Perlin noise, or handle as future feature?
+
+Multiplayer/Cloud Saves: Architecture supports it (deterministic simulation, serializable state), but implementation scope is large. Cloud saves in Phase 11, but multiplayer would be separate epic - defer to post-v1.0?
+
+Content Creation Tools: Should we build Unity Editor tools for quest/NPC creation (custom inspectors, visual editors), or rely on ScriptableObject inspector editing? Recommend custom inspectors in Phase 8 for faster content iteration.
+
+Ability System: Mentioned "player abilities" but not detailed. Should we plan a Phase 8.5 for skill trees, unlockable abilities, cooldown-based powers? Recommend adding between Phase 8-9.
+
+Art Asset Integration: All phases use placeholders. When do you plan pixel art asset creation - parallel to development or post-prototype? Recommend defining sprite requirements per phase for parallel artist work.
+
+Analytics/Telemetry: For balancing NPC behaviors, quest difficulty, should we add analytics events early (Phase 4+) or post-launch? Recommend lightweight event logging in Phase 10+ for ecosystem balancing.
