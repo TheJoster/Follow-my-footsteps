@@ -83,9 +83,8 @@ namespace FollowMyFootsteps.Grid
             var cell2 = hexGrid.GetCell(new HexCoord(10, 10));
             if (cell2 != null)
             {
-                cell2.IsWalkable = false;
-                cell2.TerrainTypeIndex = 2; // Mountain (gray)
-                Debug.Log("Set cell (10,10) to Non-walkable + Mountain");
+                cell2.TerrainTypeIndex = 2; // Mountain (gray, walkable with cost 3)
+                Debug.Log("Set cell (10,10) to Mountain (gray, cost 3)");
             }
             
             var cell3 = hexGrid.GetCell(new HexCoord(7, 3));
