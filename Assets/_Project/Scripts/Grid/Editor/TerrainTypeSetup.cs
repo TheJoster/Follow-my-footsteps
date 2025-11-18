@@ -19,8 +19,16 @@ namespace FollowMyFootsteps.Grid.Editor
 
         static TerrainTypeSetup()
         {
-            // Only run once after initial setup
-            if (!EditorPrefs.GetBool(SETUP_PREF_KEY, false))
+            // Run if not marked as created, OR if assets are missing
+            bool isMarkedAsCreated = EditorPrefs.GetBool(SETUP_PREF_KEY, false);
+            bool assetsExist = File.Exists(TERRAIN_TYPES_PATH + "Grass.asset") &&
+                              File.Exists(TERRAIN_TYPES_PATH + "Water.asset") &&
+                              File.Exists(TERRAIN_TYPES_PATH + "Mountain.asset") &&
+                              File.Exists(TERRAIN_TYPES_PATH + "Forest.asset") &&
+                              File.Exists(TERRAIN_TYPES_PATH + "Desert.asset") &&
+                              File.Exists(TERRAIN_TYPES_PATH + "Snow.asset");
+            
+            if (!isMarkedAsCreated || !assetsExist)
             {
                 EditorApplication.delayCall += CreateDefaultTerrainTypes;
             }
@@ -69,23 +77,8 @@ namespace FollowMyFootsteps.Grid.Editor
             // Create new terrain type
             TerrainType terrain = ScriptableObject.CreateInstance<TerrainType>();
 
-            // Use reflection to set private fields
-            var terrainNameField = typeof(TerrainType).GetField("terrainName",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var colorTintField = typeof(TerrainType).GetField("colorTint",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var movementCostField = typeof(TerrainType).GetField("movementCost",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var canBuildField = typeof(TerrainType).GetField("canBuild",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var canModifyField = typeof(TerrainType).GetField("canModify",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            terrainNameField?.SetValue(terrain, name);
-            colorTintField?.SetValue(terrain, colorTint);
-            movementCostField?.SetValue(terrain, movementCost);
-            canBuildField?.SetValue(terrain, canBuild);
-            canModifyField?.SetValue(terrain, canModify);
+            // Use the InitializeForTest method to set values
+            terrain.InitializeForTest(name, movementCost, canBuild, canModify, colorTint);
 
             // Create asset
             AssetDatabase.CreateAsset(terrain, assetPath);

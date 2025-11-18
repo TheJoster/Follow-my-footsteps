@@ -117,25 +117,16 @@ namespace FollowMyFootsteps.Grid
 
             if (!needsGeneration) return;
 
-            // Generate 6 terrain type sprites
-            Color[] colors = new Color[]
-            {
-                new Color(0.3f, 0.8f, 0.3f), // Grass (green)
-                new Color(0.2f, 0.4f, 0.9f), // Water (blue)
-                new Color(0.5f, 0.5f, 0.5f), // Mountain (gray)
-                new Color(0.1f, 0.5f, 0.1f), // Forest (dark green)
-                new Color(0.9f, 0.8f, 0.4f), // Desert (yellow)
-                new Color(0.9f, 0.9f, 0.95f) // Snow (white)
-            };
-
+            // Generate a single white hex sprite for all terrain types
+            // The ColorTint from TerrainType will handle the actual coloring
             string[] names = { "Grass", "Water", "Mountain", "Forest", "Desert", "Snow" };
 
             for (int i = 0; i < 6; i++)
             {
-                terrainSprites[i] = CreateHexSprite(colors[i], names[i], 128);
+                terrainSprites[i] = CreateHexSprite(Color.white, names[i], 128);
             }
 
-            Debug.Log($"Generated 6 placeholder hex sprites for HexRenderer. Each sprite is 128x128 with hexagon shape.");
+            Debug.Log($"Generated 6 white hex sprites for HexRenderer. ColorTint from TerrainType will provide the color.");
             Debug.Log($"HexMetrics: outerRadius={HexMetrics.outerRadius}, innerRadius={HexMetrics.innerRadius}");
         }
 
@@ -326,6 +317,11 @@ namespace FollowMyFootsteps.Grid
             if (cell.Terrain != null)
             {
                 spriteRenderer.color = cell.Terrain.ColorTint;
+            }
+            else
+            {
+                // Default to grass color if no terrain assigned
+                spriteRenderer.color = new Color(0.3f, 0.8f, 0.3f);
             }
 
             // Apply scale

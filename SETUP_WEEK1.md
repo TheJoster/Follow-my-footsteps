@@ -1,9 +1,9 @@
-# Week 1 & Phase 1.3-1.4: Hex Grid Foundation & Rendering - Setup Guide
+# Week 1 & Phase 1: Complete Hex Grid Foundation - Setup Guide
 
 **Project**: Follow My Footsteps  
-**Phase**: Phase 1, Steps 1.2-1.4 - Complete Hex Grid System  
+**Phase**: Phase 1 (Steps 1.2-1.5) - Complete Hex Grid System with Data Architecture  
 **Unity Version**: Unity 6000.2.12f1 (Unity 6)  
-**Goal**: Complete hex grid system with rendering, interaction, and debug visualization
+**Goal**: Complete hex grid system with rendering, interaction, debug visualization, and ScriptableObject data architecture
 
 ---
 
@@ -13,18 +13,23 @@ By the end of this setup, you will have:
 
 - ✅ **HexCoord struct** - Axial coordinate system (q, r) with cube coordinate support
 - ✅ **HexMetrics utilities** - Complete hex math: conversions, neighbors, distance, range
-- ✅ **75 unit tests** - 27 hex math + 48 chunk system (all passing)
+- ✅ **91 unit tests** - Comprehensive coverage including parameterized terrain tests (all passing)
 - ✅ **Chunk-based grid** - HexGrid, HexChunk, HexCell with pooling and state management
-- ✅ **Hex rendering** - Auto-generated colored sprites for 6 terrain types
-- ✅ **Debug visualizer** - Hover highlighting, coordinate display, cell info panel
+- ✅ **Hex rendering** - White hex sprites with TerrainType ColorTint for proper color multiplication
+- ✅ **ScriptableObject data architecture** - TerrainType and EntityDefinition base classes
+- ✅ **Test infrastructure** - TerrainTestHelper with comprehensive test patterns
+- ✅ **Debug visualizer** - Hover highlighting, coordinate display, cell info panel, 3 test patterns
+- ✅ **Auto-terrain assignment** - HexGrid auto-loads Grass as defaultTerrain in editor
 - ✅ **Camera controls** - WASD/Arrow movement, mouse drag, zoom (Q/E or scroll wheel)
 - ✅ **Assembly definitions** - Proper code compilation and test framework integration
 
 **Completed Systems**:
 - ✅ Hex coordinate math foundation
 - ✅ Chunk-based grid architecture (16x16 cells per chunk)
-- ✅ Visual hex rendering with honeycomb pattern
+- ✅ Visual hex rendering with honeycomb pattern and terrain colors
 - ✅ Interactive hover system with runtime sprite highlighting
+- ✅ Data-driven terrain system (6 standard types: Grass, Water, Mountain, Forest, Desert, Snow)
+- ✅ Comprehensive terrain testing infrastructure (3 test patterns)
 - ✅ Camera movement and zoom controls
 - ✅ Application quit (Escape key)
 
@@ -59,22 +64,37 @@ Follow my footsteps/
 │   │   ├── Grid/
 │   │   │   ├── HexCoord.cs                       ✅ Created
 │   │   │   ├── HexMetrics.cs                     ✅ Created
-│   │   │   ├── HexCell.cs                        ✅ Created
+│   │   │   ├── HexCell.cs                        ✅ Created (Phase 1.5: Refactored to use TerrainType)
 │   │   │   ├── HexChunk.cs                       ✅ Created
-│   │   │   ├── HexGrid.cs                        ✅ Created
-│   │   │   ├── HexRenderer.cs                    ✅ Created
-│   │   │   ├── GridVisualizer.cs                 ✅ Created
+│   │   │   ├── HexGrid.cs                        ✅ Created (Phase 1.5: Auto-loads Grass as defaultTerrain)
+│   │   │   ├── HexRenderer.cs                    ✅ Created (Phase 1.5: White sprites + ColorTint multiplication)
+│   │   │   ├── GridVisualizer.cs                 ✅ Created (Phase 1.5: 3 comprehensive test patterns)
 │   │   │   ├── HexSpriteGenerator.cs             ✅ Created (legacy)
+│   │   │   ├── TerrainType.cs                    ✅ Created (Phase 1.5)
+│   │   │   ├── TerrainTypeGenerator.cs           ✅ Created (Phase 1.5)
+│   │   │   ├── Editor/
+│   │   │   │   └── TerrainTypeSetup.cs           ✅ Created (Phase 1.5: Auto-creates terrain assets)
 │   │   │   └── FollowMyFootsteps.Grid.asmdef     ✅ Created
 │   │   └── Core/
+│   │       ├── EntityDefinition.cs               ✅ Created (Phase 1.5: Abstract base for NPCs/Player)
 │   │       ├── ApplicationManager.cs             ✅ Created
 │   │       └── CameraController.cs               ✅ Created
+│   ├── ScriptableObjects/
+│   │   └── TerrainTypes/                         ✅ Created (Phase 1.5)
+│   │       ├── Grass.asset                       ✅ Auto-generated (cost 1)
+│   │       ├── Water.asset                       ✅ Auto-generated (cost 999, impassable)
+│   │       ├── Mountain.asset                    ✅ Auto-generated (cost 3)
+│   │       ├── Forest.asset                      ✅ Auto-generated (cost 2)
+│   │       ├── Desert.asset                      ✅ Auto-generated (cost 1)
+│   │       └── Snow.asset                        ✅ Auto-generated (cost 2)
 │   └── Tests/EditMode/
 │       ├── HexCoordTests.cs                      ✅ Created
 │       ├── HexMetricsTests.cs                    ✅ Created
-│       ├── HexCellTests.cs                       ✅ Created
+│       ├── HexCellTests.cs                       ✅ Created (Phase 1.5: Parameterized tests)
 │       ├── HexChunkTests.cs                      ✅ Created
 │       ├── HexGridTests.cs                       ✅ Created
+│       ├── TestTerrainFactory.cs                 ✅ Created (Phase 1.5)
+│       ├── TerrainTestHelper.cs                  ✅ Created (Phase 1.5)
 │       └── FollowMyFootsteps.Tests.EditMode.asmdef ✅ Created
 ```
 
@@ -448,7 +468,7 @@ git add Assets/_Project/Scripts/Core/
 git add Assets/_Project/Tests/EditMode/
 git add SETUP_WEEK1.md
 git add .gitignore
-git commit -m "feat(grid): complete Phase 1 hex grid foundation (Steps 1.2-1.4)
+git commit -m "feat(grid): complete Phase 1 hex grid foundation with data architecture (Steps 1.2-1.5)
 
 Week 1 / Phase 1.2 - Hex Math Foundation:
 - Add HexCoord struct with axial coordinates (q,r) and cube support
@@ -457,17 +477,37 @@ Week 1 / Phase 1.2 - Hex Math Foundation:
 - Add 27 unit tests with full coverage
 
 Phase 1.3 - Chunk-Based Grid System:
-- Add HexCell class with bitwise state flags and terrain index
+- Add HexCell class with bitwise state flags and terrain reference
 - Add HexChunk container for 16x16 cells with pooling lifecycle
 - Add HexGrid manager with chunk dictionary and query methods
 - Add 48 unit tests for chunk system (75 total tests passing)
 
 Phase 1.4 - Rendering & Interaction:
-- Add HexRenderer with runtime hex sprite generation (6 terrain types)
+- Add HexRenderer with runtime hex sprite generation
 - Add GridVisualizer with hover highlighting and debug display
 - Implement procedural hexagon sprite generation algorithm
 - Add yellow gizmo outlines for Scene view debugging
-- Create test cells demonstrating all terrain types
+- Create test cells demonstrating terrain types
+
+Phase 1.5 - ScriptableObject Data Architecture:
+- Add TerrainType ScriptableObject (name, sprite, cost, build flags, tint)
+- Add EntityDefinition abstract base (name, sprite, health, speed)
+- Add TerrainTypeSetup editor script with auto-asset creation
+- Add TerrainTypeGenerator menu command for manual creation
+- Add TestTerrainFactory for unit test support
+- Add TerrainTestHelper with 3 comprehensive test patterns:
+  * Pattern 1: 6x6 terrain type grid at origin
+  * Pattern 2: Pathfinding test course at (20,0)
+  * Pattern 3: Combat arena at (40,0)
+- Refactor HexCell: TerrainTypeIndex → Terrain property
+- Refactor HexGrid: Auto-loads Grass as defaultTerrain (editor only)
+- Refactor HexRenderer: Generate white sprites, use ColorTint multiplication
+- Refactor GridVisualizer: Add testTerrains array, 3 test patterns
+- Refactor HexCellTests: Add parameterized tests with [TestCaseSource]
+- Create 6 terrain type assets (Grass/Water/Mountain/Forest/Desert/Snow)
+- Fix: Changed sprite generation from baked colors to white base
+- Fix: TerrainTypeSetup uses InitializeForTest() instead of reflection
+- Fix: Default cells without terrain assignment use grass color fallback
 
 Additional Features:
 - Add CameraController for WASD/zoom controls (min=2, max=15)
@@ -475,12 +515,14 @@ Additional Features:
 - Configure sorting layers (Terrain/Environmental/Entities/UI)
 
 Documentation:
-- Update SETUP_WEEK1.md for Phases 1.2-1.4 complete
-- Document all 75 tests and scene setup instructions
-- Add controls reference and troubleshooting
+- Update SETUP_WEEK1.md for Phase 1 complete (Steps 1.2-1.5)
+- Update Project Plan 3.md with Phase 14 and testing strategy
+- Document all 91 tests and comprehensive test patterns
+- Add terrain testing best practices
 
-Completes Phase 1 Steps 1.2-1.4 from Project Plan 2.md
-Total: 15 production files, 5 test files, 75 passing tests"
+Completes Phase 1 (Steps 1.2-1.5) from Project Plan 2.md
+Total: 20 production files, 7 test files, 6 terrain assets, 91 passing tests
+Data-driven architecture ready for Phase 2"
 ```
 
 ---
@@ -549,8 +591,13 @@ Total: 15 production files, 5 test files, 75 passing tests"
 
 **Ready to test?** Follow Steps 1-6 to set up the scene and press Play! 🎮
 
-If all 75 tests pass and the visual hex grid renders correctly with hover highlighting and camera controls, Phase 1 (Steps 1.2-1.4) is complete. Next: Phase 1.5 ScriptableObject architecture.
+**Important Setup Note:**
+- HexGrid will auto-load the Grass terrain asset as the defaultTerrain (editor only)
+- If you see "[HexGrid] Could not find Grass terrain asset" in the Console, manually assign the Grass asset from `Assets/_Project/ScriptableObjects/TerrainTypes/Grass.asset` to the HexGrid's "Default Terrain" field in the Inspector
+- GridVisualizer test patterns require assigning the 6 terrain assets to the testTerrains array (indices 0-5: Grass, Water, Mountain, Forest, Desert, Snow)
+
+If all 91 tests pass and the visual hex grid renders correctly with terrain colors, hover highlighting, and camera controls, Phase 1 (Steps 1.2-1.5) is complete and ready for final commit.
 
 ---
 
-*Last updated: January 2025*
+*Last updated: November 18, 2025*

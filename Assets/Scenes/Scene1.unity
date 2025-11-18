@@ -325,6 +325,17 @@ MonoBehaviour:
   hoverColor: {r: 1, g: 1, b: 0, a: 0.3}
   nonWalkableColor: {r: 1, g: 0, b: 0, a: 0.3}
   occupiedColor: {r: 0, g: 0, b: 1, a: 0.3}
+  testTerrains:
+  - {fileID: 11400000, guid: ae6a312c332dfd849bdabea6f614c717, type: 2}
+  - {fileID: 11400000, guid: 16d5d974fbd3d424f97e9e7259610f25, type: 2}
+  - {fileID: 11400000, guid: d877ca5715c77174397e221fad5f6956, type: 2}
+  - {fileID: 11400000, guid: 50061b9bce2640e459d40c0ef705f74f, type: 2}
+  - {fileID: 11400000, guid: 1be3747b67a0c3444a1eae5a61118eae, type: 2}
+  - {fileID: 11400000, guid: 62d3a56c191dfe044821098309cbc8e5, type: 2}
+  useComprehensiveTestPatterns: 1
+  enablePattern1_TerrainGrid: 1
+  enablePattern2_PathfindingCourse: 1
+  enablePattern3_CombatArena: 1
 --- !u!114 &1885503894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -361,6 +372,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: FollowMyFootsteps.Grid::FollowMyFootsteps.Grid.HexGrid
   initialGridSizeInChunks: 2
+  defaultTerrain: {fileID: 11400000, guid: ae6a312c332dfd849bdabea6f614c717, type: 2}
 --- !u!4 &1885503896
 Transform:
   m_ObjectHideFlags: 0

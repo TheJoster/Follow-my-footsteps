@@ -58,6 +58,41 @@ namespace FollowMyFootsteps.Grid
         {
             chunks = new Dictionary<HexCoord, HexChunk>();
             chunkPool = new Queue<HexChunk>();
+            
+            // Load default terrain if not assigned
+            if (defaultTerrain == null)
+            {
+#if UNITY_EDITOR
+                // In editor, try to find Grass terrain asset
+                string[] guids = UnityEditor.AssetDatabase.FindAssets("t:TerrainType Grass");
+                Debug.Log($"[HexGrid] Found {guids.Length} TerrainType assets matching 'Grass'");
+                
+                if (guids.Length > 0)
+                {
+                    string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                    defaultTerrain = UnityEditor.AssetDatabase.LoadAssetAtPath<TerrainType>(path);
+                    
+                    if (defaultTerrain != null)
+                    {
+                        Debug.Log($"[HexGrid] Auto-assigned default terrain: {defaultTerrain.TerrainName} from {path}");
+                    }
+                    else
+                    {
+                        Debug.LogError($"[HexGrid] Failed to load terrain from path: {path}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[HexGrid] Could not find Grass terrain asset. Please assign defaultTerrain in Inspector or let TerrainTypeSetup create the assets.");
+                }
+#else
+                Debug.LogWarning("[HexGrid] defaultTerrain not assigned. Please assign it in Inspector before building.");
+#endif
+            }
+            else
+            {
+                Debug.Log($"[HexGrid] Default terrain already assigned: {defaultTerrain.TerrainName}");
+            }
         }
 
         private void Start()
