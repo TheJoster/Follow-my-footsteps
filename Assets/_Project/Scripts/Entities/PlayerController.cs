@@ -57,6 +57,11 @@ namespace FollowMyFootsteps.Entities
         private Vector3 moveTargetPosition;
         private List<HexCoord> currentPath;
         private int currentPathIndex;
+        private PathVisualizer pathVisualizer;
+#if !(UNITY_EDITOR || UNITY_STANDALONE)
+        private HexCoord? previewedCell; // Track which cell is currently previewed (mobile only)
+        private List<HexCoord> previewedPath; // Track the previewed path (mobile only)
+#endif
 
         #endregion
 
@@ -75,6 +80,13 @@ namespace FollowMyFootsteps.Entities
         private void Awake()
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
+
+            // Get or add PathVisualizer
+            pathVisualizer = GetComponent<PathVisualizer>();
+            if (pathVisualizer == null)
+            {
+                pathVisualizer = gameObject.AddComponent<PathVisualizer>();
+            }
 
             // Auto-find HexGrid if not assigned
             if (hexGrid == null)
@@ -106,6 +118,11 @@ namespace FollowMyFootsteps.Entities
             if (isMoving)
             {
                 UpdateMovement();
+            }
+            else
+            {
+                // Show path preview when not moving
+                UpdatePathPreview();
             }
         }
 
@@ -215,14 +232,129 @@ namespace FollowMyFootsteps.Entities
             }
         }
 
+        /// <summary>
+        /// Update path preview based on pointer position.
+        /// Only works on PC with mouse hover. Mobile uses tap-to-preview.
+        /// </summary>
+        private void UpdatePathPreview()
+        {
+#if UNITY_EDITOR || UNITY_STANDALONE
+            if (!IsAlive || isMoving || InputManager.Instance == null || hexGrid == null)
+            {
+                if (pathVisualizer != null && pathVisualizer.IsVisible)
+                {
+                    pathVisualizer.HidePath();
+                }
+                return;
+            }
+
+            // Get hex coordinate under pointer
+            Vector2 pointerPos = InputManager.Instance.GetPointerPosition();
+            Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(pointerPos.x, pointerPos.y, 0));
+            HexCoord hoveredHex = HexMetrics.WorldToHex(worldPos);
+
+            // Don't show path to current position
+            if (hoveredHex.Equals(CurrentPosition))
+            {
+                if (pathVisualizer != null)
+                {
+                    pathVisualizer.HidePath();
+                }
+                return;
+            }
+
+            // Calculate path
+            int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
+            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, hoveredHex, maxMovement);
+
+            // Show path preview
+            if (pathVisualizer != null)
+            {
+                if (path != null && path.Count > 0)
+                {
+                    pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
+                }
+                else
+                {
+                    pathVisualizer.HidePath();
+                }
+            }
+#endif
+        }
+
         private void HandleHexClicked(HexCoord clickedCoord)
         {
             // Only process input during player's turn and if alive
             if (!IsAlive || isMoving)
                 return;
 
-            // Attempt to move to clicked hex
+            // Don't allow clicking current position
+            if (clickedCoord.Equals(CurrentPosition))
+                return;
+
+#if UNITY_EDITOR || UNITY_STANDALONE
+            // PC: Direct movement (hover already showed preview)
             TryMoveTo(clickedCoord);
+#else
+            // Mobile: Tap-to-preview, tap-to-confirm workflow
+            
+            // Check if this is a confirmation tap (tapping the same previewed cell)
+            if (previewedCell.HasValue && previewedCell.Value.Equals(clickedCoord) && previewedPath != null)
+            {
+                // Confirm movement - use the already calculated path
+                Debug.Log($"[PlayerController] Confirming movement to {clickedCoord}");
+                MoveTo(previewedPath);
+                
+                // Clear preview state
+                previewedCell = null;
+                previewedPath = null;
+                return;
+            }
+
+            // First tap - show preview
+            int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
+            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, clickedCoord, maxMovement);
+
+            if (path == null || path.Count == 0)
+            {
+                Debug.LogWarning($"[PlayerController] No valid path to {clickedCoord}");
+                
+                // Clear any existing preview
+                if (pathVisualizer != null)
+                {
+                    pathVisualizer.HidePath();
+                }
+                previewedCell = null;
+                previewedPath = null;
+                return;
+            }
+
+            // Calculate and validate path cost
+            int pathCost = Pathfinding.GetPathCost(hexGrid, path);
+            if (pathCost > maxMovement)
+            {
+                Debug.LogWarning($"[PlayerController] Path cost ({pathCost}) exceeds movement range ({maxMovement})");
+                
+                // Still show the path in red to indicate it's too far
+                if (pathVisualizer != null)
+                {
+                    pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
+                }
+                previewedCell = clickedCoord;
+                previewedPath = null; // Don't store invalid path
+                return;
+            }
+
+            // Show path preview and store for confirmation
+            Debug.Log($"[PlayerController] Previewing path to {clickedCoord} (tap again to confirm)");
+            if (pathVisualizer != null)
+            {
+                pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
+            }
+            
+            previewedCell = clickedCoord;
+            previewedPath = path;
+#endif
         }
 
         #endregion
@@ -277,6 +409,18 @@ namespace FollowMyFootsteps.Entities
                 Debug.LogWarning("[PlayerController] Invalid path provided");
                 return;
             }
+
+            // Hide path preview when starting movement
+            if (pathVisualizer != null)
+            {
+                pathVisualizer.HidePath();
+            }
+
+#if !(UNITY_EDITOR || UNITY_STANDALONE)
+            // Clear preview state (mobile only)
+            previewedCell = null;
+            previewedPath = null;
+#endif
 
             // Store path and start movement
             currentPath = path;
