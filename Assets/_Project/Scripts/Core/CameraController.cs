@@ -69,19 +69,19 @@ namespace FollowMyFootsteps.Core
             Vector3 moveDirection = Vector3.zero;
 
             // WASD movement
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+            if (UnityEngine.Input.GetKey(KeyCode.W) || UnityEngine.Input.GetKey(KeyCode.UpArrow))
             {
                 moveDirection.y += 1f;
             }
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+            if (UnityEngine.Input.GetKey(KeyCode.S) || UnityEngine.Input.GetKey(KeyCode.DownArrow))
             {
                 moveDirection.y -= 1f;
             }
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+            if (UnityEngine.Input.GetKey(KeyCode.A) || UnityEngine.Input.GetKey(KeyCode.LeftArrow))
             {
                 moveDirection.x -= 1f;
             }
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+            if (UnityEngine.Input.GetKey(KeyCode.D) || UnityEngine.Input.GetKey(KeyCode.RightArrow))
             {
                 moveDirection.x += 1f;
             }
@@ -99,25 +99,25 @@ namespace FollowMyFootsteps.Core
         private void HandleMouseDrag()
         {
             // Start drag with middle mouse button
-            if (Input.GetMouseButtonDown(2))
+            if (UnityEngine.Input.GetMouseButtonDown(2))
             {
                 isDragging = true;
-                lastMousePosition = cam.ScreenToWorldPoint(Input.mousePosition);
+                lastMousePosition = cam.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
             }
 
             // Continue dragging
-            if (Input.GetMouseButton(2) && isDragging)
+            if (UnityEngine.Input.GetMouseButton(2) && isDragging)
             {
-                Vector3 currentMousePosition = cam.ScreenToWorldPoint(Input.mousePosition);
+                Vector3 currentMousePosition = cam.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
                 Vector3 delta = lastMousePosition - currentMousePosition;
                 
                 transform.position += delta * mouseDragSpeed;
                 
-                lastMousePosition = cam.ScreenToWorldPoint(Input.mousePosition);
+                lastMousePosition = cam.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
             }
 
             // End drag
-            if (Input.GetMouseButtonUp(2))
+            if (UnityEngine.Input.GetMouseButtonUp(2))
             {
                 isDragging = false;
             }
@@ -135,14 +135,14 @@ namespace FollowMyFootsteps.Core
             float zoomDelta = 0f;
 
             // Mouse wheel zoom
-            zoomDelta -= Input.GetAxis("Mouse ScrollWheel") * zoomSpeed;
+            zoomDelta -= UnityEngine.Input.GetAxis("Mouse ScrollWheel") * zoomSpeed;
 
             // Q/E key zoom
-            if (Input.GetKey(KeyCode.Q))
+            if (UnityEngine.Input.GetKey(KeyCode.Q))
             {
                 zoomDelta += zoomSpeed * Time.deltaTime;
             }
-            if (Input.GetKey(KeyCode.E))
+            if (UnityEngine.Input.GetKey(KeyCode.E))
             {
                 zoomDelta -= zoomSpeed * Time.deltaTime;
             }

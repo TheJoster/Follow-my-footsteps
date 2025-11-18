@@ -82,6 +82,14 @@ namespace FollowMyFootsteps.Grid
         }
 
         /// <summary>
+        /// Alias for WorldToHexCoord - converts world position to hex coordinate.
+        /// </summary>
+        public static HexCoord WorldToHex(Vector3 position)
+        {
+            return WorldToHexCoord(position);
+        }
+
+        /// <summary>
         /// Rounds fractional axial coordinates to nearest hex using cube coordinate rounding.
         /// </summary>
         private static HexCoord RoundToHex(float q, float r)

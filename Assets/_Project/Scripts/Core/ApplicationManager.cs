@@ -10,7 +10,7 @@ namespace FollowMyFootsteps.Core
         private void Update()
         {
             // Quit application when Escape is pressed
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Escape))
             {
                 QuitApplication();
             }
