@@ -180,7 +180,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 8
+  orthographic size: 20
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -205,14 +205,14 @@ Transform:
   m_GameObject: {fileID: 559298752}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -10}
+  m_LocalPosition: {x: 15, y: 15, z: -10}
   m_LocalScale: {x: 0.9, y: 0.9, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1900725048}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &581036886
+--- !u!1 &1885503891
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -220,46 +220,100 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 581036888}
-  - component: {fileID: 581036889}
+  - component: {fileID: 1885503896}
+  - component: {fileID: 1885503895}
+  - component: {fileID: 1885503894}
+  - component: {fileID: 1885503893}
+  - component: {fileID: 1885503892}
   m_Layer: 0
-  m_Name: HexGridManager
+  m_Name: HexGrid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &581036888
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 581036886}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: -0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &581036889
+--- !u!114 &1885503892
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 581036886}
+  m_GameObject: {fileID: 1885503891}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b6708332f006d64ead3e8765c335876, type: 3}
+  m_Script: {fileID: 11500000, guid: 33caea1f0910d9b46bfec88d25985b53, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: FollowMyFootsteps.Grid::FollowMyFootsteps.Grid.SimpleHexGrid
-  hexCellPrefab: {fileID: 6848322011024656622, guid: 8a19b07fd14c3f14399f3116849c2392, type: 3}
-  gridRadius: 3
-  grassColor: {r: 0, g: 1, b: 0, a: 1}
+  m_EditorClassIdentifier: FollowMyFootsteps.Grid::FollowMyFootsteps.Grid.HexSpriteGenerator
+  textureSize: 128
+--- !u!114 &1885503893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1885503891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27240afd980d16746a61da1f1d1fd2b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps.Grid::FollowMyFootsteps.Grid.GridVisualizer
   showCoordinates: 1
+  showCellStates: 1
+  highlightHover: 1
+  hoverColor: {r: 1, g: 1, b: 0, a: 0.3}
+  nonWalkableColor: {r: 1, g: 0, b: 0, a: 0.3}
+  occupiedColor: {r: 0, g: 0, b: 1, a: 0.3}
+--- !u!114 &1885503894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1885503891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f91db5c9d6400bf4f84ff15eb8122a91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps.Grid::FollowMyFootsteps.Grid.HexRenderer
+  terrainSprites:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  spriteMaterial: {fileID: 0}
+  spriteScale: 1
+  terrainDepth: 0
+  enableFrustumCulling: 1
+--- !u!114 &1885503895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1885503891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 024de0e37a95e8e41a17d7882e4a90d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps.Grid::FollowMyFootsteps.Grid.HexGrid
+  initialGridSizeInChunks: 2
+--- !u!4 &1885503896
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1885503891}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1900725046
 GameObject:
   m_ObjectHideFlags: 0
@@ -362,4 +416,4 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 559298755}
-  - {fileID: 581036888}
+  - {fileID: 1885503896}

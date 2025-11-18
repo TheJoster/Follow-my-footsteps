@@ -1,116 +1,173 @@
-using UnityEngine;
+using System;
 
 namespace FollowMyFootsteps.Grid
 {
     /// <summary>
     /// Represents a single hex cell in the grid.
-    /// Stores coordinate, terrain data, and handles visual representation.
-    /// Week 1 Spike: Minimal implementation for visual testing.
+    /// Stores coordinate, terrain data, and cell state flags.
+    /// Phase 1, Step 1.3 - Chunk-Based Grid System
     /// </summary>
-    public class HexCell : MonoBehaviour
+    [Serializable]
+    public class HexCell
     {
         #region Fields
-
-        [SerializeField]
-        private HexCoord coordinates;
-
-        private SpriteRenderer spriteRenderer;
-
-        #endregion
-
-        #region Properties
 
         /// <summary>
         /// The hex coordinate of this cell.
         /// </summary>
-        public HexCoord Coordinates
-        {
-            get => coordinates;
-            set
-            {
-                coordinates = value;
-                UpdateName();
-            }
-        }
-
-        #endregion
-
-        #region Unity Lifecycle
-
-        private void Awake()
-        {
-            spriteRenderer = GetComponent<SpriteRenderer>();
-        }
-
-        private void OnMouseDown()
-        {
-            Debug.Log($"Clicked hex at coordinates: {coordinates}");
-        }
-
-        private void OnMouseEnter()
-        {
-            // Highlight on hover
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = Color.yellow;
-            }
-        }
-
-        private void OnMouseExit()
-        {
-            // Return to original color (green by default)
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = Color.green;
-            }
-        }
-
-        #endregion
-
-        #region Public Methods
+        public HexCoord Coordinates { get; private set; }
 
         /// <summary>
-        /// Sets the visual tint of this hex cell.
+        /// The chunk this cell belongs to.
         /// </summary>
-        public void SetColor(Color color)
+        public HexChunk Chunk { get; internal set; }
+
+        /// <summary>
+        /// Terrain type index (references TerrainType ScriptableObject in Phase 1.5).
+        /// For now, 0 = grass, 1 = water, 2 = mountain, etc.
+        /// </summary>
+        public int TerrainTypeIndex { get; set; }
+
+        /// <summary>
+        /// Cell state flags using bitwise operations for efficient storage.
+        /// </summary>
+        private byte stateFlags;
+
+        #endregion
+
+        #region Cell State Flags (Bitwise)
+
+        [Flags]
+        private enum CellState : byte
         {
-            // Ensure sprite renderer is cached
-            if (spriteRenderer == null)
+            None = 0,
+            Occupied = 1 << 0,      // Cell has an entity
+            HasEvent = 1 << 1,      // Cell has a trigger/event
+            Walkable = 1 << 2,      // Cell can be walked on
+            Buildable = 1 << 3,     // Cell allows construction
+            Visible = 1 << 4,       // Cell is in player vision
+            Explored = 1 << 5       // Cell has been discovered
+        }
+
+        /// <summary>
+        /// Is the cell currently occupied by an entity?
+        /// </summary>
+        public bool IsOccupied
+        {
+            get => HasFlag(CellState.Occupied);
+            set => SetFlag(CellState.Occupied, value);
+        }
+
+        /// <summary>
+        /// Does the cell have an event/trigger?
+        /// </summary>
+        public bool HasEvent
+        {
+            get => HasFlag(CellState.HasEvent);
+            set => SetFlag(CellState.HasEvent, value);
+        }
+
+        /// <summary>
+        /// Can entities walk on this cell?
+        /// </summary>
+        public bool IsWalkable
+        {
+            get => HasFlag(CellState.Walkable);
+            set => SetFlag(CellState.Walkable, value);
+        }
+
+        /// <summary>
+        /// Can structures be built on this cell?
+        /// </summary>
+        public bool IsBuildable
+        {
+            get => HasFlag(CellState.Buildable);
+            set => SetFlag(CellState.Buildable, value);
+        }
+
+        /// <summary>
+        /// Is the cell currently visible to the player?
+        /// </summary>
+        public bool IsVisible
+        {
+            get => HasFlag(CellState.Visible);
+            set => SetFlag(CellState.Visible, value);
+        }
+
+        /// <summary>
+        /// Has the player discovered this cell?
+        /// </summary>
+        public bool IsExplored
+        {
+            get => HasFlag(CellState.Explored);
+            set => SetFlag(CellState.Explored, value);
+        }
+
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Creates a new hex cell.
+        /// </summary>
+        public HexCell(HexCoord coordinates, int terrainTypeIndex = 0)
+        {
+            Coordinates = coordinates;
+            TerrainTypeIndex = terrainTypeIndex;
+            stateFlags = (byte)(CellState.Walkable | CellState.Buildable); // Default: walkable and buildable
+        }
+
+        #endregion
+
+        #region Navigation Cost
+
+        /// <summary>
+        /// Gets the movement cost for this cell based on terrain type.
+        /// Returns 999 if not walkable (impassable).
+        /// Phase 1.5 will use TerrainType ScriptableObject for this.
+        /// </summary>
+        public int GetMovementCost()
+        {
+            if (!IsWalkable)
+                return 999;
+
+            // Temporary hardcoded costs until TerrainType SO is implemented
+            return TerrainTypeIndex switch
             {
-                spriteRenderer = GetComponent<SpriteRenderer>();
-            }
-            
-            if (spriteRenderer != null)
-            {
-                spriteRenderer.color = color;
-            }
+                0 => 1,   // Grass
+                1 => 999, // Water (impassable)
+                2 => 3,   // Mountain
+                3 => 2,   // Forest
+                4 => 1,   // Desert
+                5 => 2,   // Snow
+                _ => 1
+            };
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private bool HasFlag(CellState flag)
+        {
+            return (stateFlags & (byte)flag) != 0;
+        }
+
+        private void SetFlag(CellState flag, bool value)
+        {
+            if (value)
+                stateFlags |= (byte)flag;
             else
-            {
-                Debug.LogWarning($"No SpriteRenderer found on {gameObject.name}");
-            }
+                stateFlags &= (byte)~flag;
         }
 
         #endregion
 
-        #region Private Methods
+        #region Debug
 
-        private void UpdateName()
+        public override string ToString()
         {
-            gameObject.name = $"Hex_{coordinates.q}_{coordinates.r}";
-        }
-
-        #endregion
-
-        #region Gizmos
-
-        private void OnDrawGizmos()
-        {
-            // Draw coordinate label in Scene view
-            Vector3 labelPos = transform.position + Vector3.up * 0.1f;
-            
-            #if UNITY_EDITOR
-            UnityEditor.Handles.Label(labelPos, $"{coordinates.q},{coordinates.r}");
-            #endif
+            return $"HexCell {Coordinates} | Terrain: {TerrainTypeIndex} | Walkable: {IsWalkable} | Occupied: {IsOccupied}";
         }
 
         #endregion
