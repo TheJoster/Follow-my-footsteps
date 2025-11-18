@@ -22,6 +22,11 @@ namespace FollowMyFootsteps.Grid
         [Tooltip("Initial grid size in chunks (e.g., 4 = 4x4 chunks = 64x64 cells)")]
         private int initialGridSizeInChunks = 4;
 
+        [Header("Default Terrain")]
+        [SerializeField]
+        [Tooltip("Default terrain type for newly created cells")]
+        private TerrainType defaultTerrain;
+
         #endregion
 
         #region Fields
@@ -158,8 +163,8 @@ namespace FollowMyFootsteps.Grid
                         chunkOffsetR + localR
                     );
 
-                    // Create cell with default grass terrain (0)
-                    HexCell cell = new HexCell(cellCoord, terrainTypeIndex: 0);
+                    // Create cell with default terrain (null if not assigned)
+                    HexCell cell = new HexCell(cellCoord, terrain: defaultTerrain);
                     chunk.AddCell(cell);
                 }
             }

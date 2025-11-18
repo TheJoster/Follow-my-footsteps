@@ -6,6 +6,284 @@
 
 ---
 
+## Testing Strategy for All Terrain Types (Phases 2-13)
+
+### Problem
+Currently, only a few test cells demonstrate different terrain types in `GridVisualizer.SetupTestCells()`. Features developed in Phases 2-13 need to be tested across all 6 terrain types (Grass, Water, Mountain, Forest, Desert, Snow) to ensure proper functionality before procedural generation is implemented in Phase 14.
+
+### Solution: Multi-Terrain Test Infrastructure
+
+**1. Enhanced Test Scene Setup**
+- Update `GridVisualizer.SetupTestCells()` to create comprehensive test layouts:
+  ```
+  Pattern 1: Terrain Type Grid (6x6)
+  [Grass][Water][Mountain][Forest][Desert][Snow]
+  [Grass][Water][Mountain][Forest][Desert][Snow]
+  [Grass][Water][Mountain][Forest][Desert][Snow]
+  ...
+  
+  Pattern 2: Pathfinding Test Course
+  [Start:Grass] → [Forest] → [Desert] → [Mountain] → [Grass] → [Goal:Grass]
+  [Water][Water][Water] (obstacle requiring path around)
+  
+  Pattern 3: Combat Arena
+  [Mountain] [Grass] [Forest]
+  [Desert]  [Player] [Snow]
+  [Grass]   [Enemy]  [Mountain]
+  ```
+- Implement `TerrainTestLayoutGenerator.cs`:
+  - Method: `CreateGridLayout()` - Systematic 6x6 grid
+  - Method: `CreatePathfindingCourse()` - Path with all terrain types
+  - Method: `CreateCombatArena()` - Combat on varied terrain
+  - Method: `CreateBuildTestArea()` - Buildable vs non-buildable terrain
+  - Called from GridVisualizer on scene load (development mode only)
+
+**2. Terrain Testing Helper Class**
+- Create `Assets/_Project/Tests/EditMode/TerrainTestHelper.cs`:
+  ```csharp
+  public static class TerrainTestHelper
+  {
+      // Get all standard terrain types for iteration in tests
+      public static TerrainType[] GetAllTerrainTypes()
+      {
+          return new TerrainType[]
+          {
+              TestTerrainFactory.Standard.Grass,
+              TestTerrainFactory.Standard.Water,
+              TestTerrainFactory.Standard.Mountain,
+              TestTerrainFactory.Standard.Forest,
+              TestTerrainFactory.Standard.Desert,
+              TestTerrainFactory.Standard.Snow
+          };
+      }
+      
+      // Create a grid with all terrain types for integration tests
+      public static HexGrid CreateTestGridWithAllTerrains(GameObject gridObject)
+      {
+          var grid = gridObject.AddComponent<HexGrid>();
+          // Assign terrain types array to grid component
+          // Implementation populates 6x6 grid with systematic terrain distribution
+          return grid;
+      }
+      
+      // Get test cells for each terrain type from a grid
+      public static Dictionary<TerrainType, HexCell> GetTestCellsPerTerrain(HexGrid grid)
+      {
+          // Returns one representative cell for each terrain type
+      }
+  }
+  ```
+
+**3. Parameterized Unit Tests**
+- Use NUnit `[TestCaseSource]` for testing features across all terrains:
+  ```csharp
+  public class PathfindingTests
+  {
+      [TestCaseSource(nameof(AllTerrainTypes))]
+      public void Pathfinding_CalculatesCorrectCostOnTerrain(TerrainType terrain)
+      {
+          // Create two cells with specified terrain
+          // Calculate path, verify cost matches terrain.MovementCost
+      }
+      
+      private static TerrainType[] AllTerrainTypes()
+      {
+          return TerrainTestHelper.GetAllTerrainTypes();
+      }
+  }
+  
+  public class CombatTests
+  {
+      [TestCaseSource(nameof(AllTerrainTypes))]
+      public void Combat_WorksOnAllTerrainTypes(TerrainType terrain)
+      {
+          // Place attacker and target on specified terrain
+          // Execute attack, verify damage calculated correctly
+          // Future: Test terrain-specific modifiers
+      }
+  }
+  ```
+
+**4. Integration Test Protocol**
+- For each new feature (Phases 2-13), include **mandatory** test checklist:
+  - [ ] Test on Grass (standard walkable, cost 1)
+  - [ ] Test on Water (impassable, cost 999)
+  - [ ] Test on Mountain (high cost walkable, cost 3)
+  - [ ] Test on Forest (medium cost walkable, cost 2)
+  - [ ] Test on Desert (standard walkable, cost 1)
+  - [ ] Test on Snow (medium cost walkable, cost 2)
+- Example for **Phase 3 (Pathfinding)**:
+  - [ ] Pathfinding on Grass: Path found, cost 1 per cell
+  - [ ] Pathfinding around Water: Path avoids Water cells
+  - [ ] Pathfinding over Mountain: Path uses Mountain if shorter, cost 3 per cell
+  - [ ] Pathfinding through Forest: Path considers Forest cost 2
+  - [ ] Mixed terrain path: Verify total cost = sum of individual terrain costs
+- Example for **Phase 7 (Building)**:
+  - [ ] Building on Grass: Allowed (canBuild = true)
+  - [ ] Building on Water: Blocked (canBuild = false)
+  - [ ] Building on Mountain: Blocked (canBuild = false)
+  - [ ] Building on Forest: Allowed (canBuild = true)
+  - [ ] Terrain modification: Flatten Mountain → Grass, verify pathfinding updates
+
+**5. GridVisualizer Enhancement (Immediate - Phase 1.5)**
+- Update `GridVisualizer.SetupTestCells()` to create diverse test scenarios:
+  ```csharp
+  private IEnumerator SetupTestCells()
+  {
+      yield return new WaitForSeconds(0.5f);
+      
+      // Create systematic test layout
+      var testCoords = new (int q, int r, int terrainIndex)[]
+      {
+          // Row 1: All terrain types
+          (5, 5, 0),   // Grass
+          (6, 5, 1),   // Water
+          (7, 5, 2),   // Mountain
+          (8, 5, 3),   // Forest
+          (9, 5, 4),   // Desert
+          (10, 5, 5),  // Snow
+          
+          // Row 2: Pathfinding test course
+          (5, 6, 0),   // Start (Grass)
+          (6, 6, 3),   // Forest
+          (7, 6, 4),   // Desert
+          (8, 6, 2),   // Mountain
+          (9, 6, 0),   // Grass
+          (10, 6, 0),  // Goal (Grass)
+          
+          // Row 3: Water obstacle
+          (6, 7, 1),   // Water
+          (7, 7, 1),   // Water
+          (8, 7, 1),   // Water
+      };
+      
+      foreach (var (q, r, terrainIndex) in testCoords)
+      {
+          var cell = hexGrid.GetCell(new HexCoord(q, r));
+          if (cell != null)
+          {
+              cell.Terrain = GetTerrain(terrainIndex);
+              cell.Chunk.IsDirty = true; // Mark for re-render
+          }
+      }
+      
+      Debug.Log("Created comprehensive test layout with all terrain types");
+  }
+  ```
+
+**6. Automated Visual Regression Testing (Phase 13)**
+- Create `Assets/_Project/Tests/PlayMode/TerrainRenderingTests.cs`:
+  ```csharp
+  [UnityTest]
+  public IEnumerator AllTerrainTypes_RenderCorrectly()
+  {
+      // Load test scene with all terrain types
+      // Capture screenshot of each terrain type
+      // Compare against baseline images (first run creates baseline)
+      // Detect rendering regressions (color changes, sprite errors)
+      yield return null;
+  }
+  ```
+- Store baseline images in `Assets/_Project/Tests/Baselines/`
+- Automated comparison detects:
+  - Incorrect sprite assignment
+  - Wrong color tints
+  - Missing terrain rendering
+
+**7. Documentation Standard (All Phases)**
+- All new features **must document** terrain-specific behavior:
+  - Movement cost implications
+  - Build restrictions
+  - Visual feedback per terrain
+  - Example documentation template:
+    ```markdown
+    ## Feature: NPC Pathfinding
+    
+    ### Terrain Behavior:
+    - **Grass**: Standard pathfinding, cost 1 per cell
+    - **Water**: Impassable, NPCs path around
+    - **Mountain**: Avoided unless necessary, cost 3 per cell
+    - **Forest**: Preferred over Mountain, cost 2 per cell
+    - **Desert**: Standard pathfinding, cost 1 per cell
+    - **Snow**: Same as Forest, cost 2 per cell
+    
+    ### Special Cases:
+    - NPCs avoid Mountain terrain unless chasing player (cost 3x higher)
+    - Water cells block vision (perception system)
+    ```
+
+### Implementation Checklist
+
+**Immediate (Complete during Phase 1.5):**
+- [x] Create `TestTerrainFactory.cs` with all 6 standard terrains
+- [ ] Create `TerrainTestHelper.cs` utility class
+- [ ] Update `GridVisualizer.SetupTestCells()` to create comprehensive test layouts
+- [ ] Document terrain-specific behavior for existing systems (HexCell, HexRenderer)
+
+**Phase 2 (Player & Basic Interaction):**
+- [ ] Test player movement on all 6 terrain types
+- [ ] Verify movement cost calculations match TerrainType.MovementCost
+- [ ] Test camera following across terrain transitions
+- [ ] Document: "Player cannot move onto Water (impassable)"
+
+**Phase 3 (Pathfinding):**
+- [ ] Parameterized pathfinding tests for all terrains (using `[TestCaseSource]`)
+- [ ] Test paths that cross multiple terrain types
+- [ ] Verify terrain cost influence on path selection (prefers Grass over Mountain)
+- [ ] Edge case: No valid path to goal (surrounded by Water)
+- [ ] Document: Pathfinding algorithm weights terrain costs
+
+**Phase 4 (NPCs):**
+- [ ] Test NPC spawning on each terrain type (verify no spawn on Water)
+- [ ] Verify NPC movement behavior per terrain (avoid high-cost terrain)
+- [ ] Test NPC perception/vision across terrain types
+- [ ] Document: NPCs have terrain preferences based on type
+
+**Phase 5 (Combat):**
+- [ ] Test combat on each terrain type
+- [ ] Verify attack range calculations across terrains
+- [ ] **Future**: Test damage/defense modifiers per terrain (e.g., Mountain = +10% defense)
+- [ ] Document: Combat functional on all walkable terrains
+
+**Phase 6 (Environmental Objects):**
+- [ ] Test trap placement on all buildable terrains (Grass, Forest, Desert, Snow)
+- [ ] Test collectible spawning on each terrain
+- [ ] Verify terrain restrictions for events/triggers
+- [ ] Document: Traps cannot be placed on Water or Mountain
+
+**Phase 7 (Building & Terrain Modification):**
+- [ ] Test building placement on buildable (Grass, Forest, Desert, Snow) vs non-buildable (Water, Mountain) terrains
+- [ ] Test terrain modification:
+  - Flatten Mountain → Grass (verify pathfinding updates, cost changes from 3 to 1)
+  - Bridge Water → Shallow Water or Grass (make passable)
+  - Clear Forest → Grass (verify cost changes from 2 to 1)
+- [ ] Verify construction restrictions per terrain type
+- [ ] Document: Terrain modification changes movement costs dynamically
+
+**Phase 8+ (Advanced Features):**
+- [ ] Quest objectives tested on varied terrains (e.g., "Build on Desert")
+- [ ] Trading tested in all biomes (merchant prices same regardless of terrain)
+- [ ] Factions fight across all terrain types
+- [ ] Save/load preserves terrain types correctly
+
+### Success Metrics
+- **Unit Tests**: 100% of terrain-dependent tests use `[TestCaseSource(AllTerrainTypes)]`
+- **Integration Tests**: Each gameplay feature has explicit test for all 6 terrains
+- **Coverage**: 80%+ code coverage including terrain-specific branches
+- **Documentation**: Every feature has "Terrain Behavior" section in docs
+- **Visual Regression**: Baseline images for all 6 terrain renderings, automated comparison
+- **Manual QA**: Test checklist completed for each phase before commit
+
+### Benefits
+1. **Early Bug Detection**: Catch terrain-specific bugs during development, not QA
+2. **Design Validation**: Ensure all terrains are useful and balanced
+3. **Refactoring Safety**: Tests prevent regressions when modifying terrain system
+4. **Documentation**: Tests serve as executable documentation of terrain behavior
+5. **Procedural Readiness**: When Phase 14 generates terrain, all systems already tested across all types
+6. **Designer Confidence**: Designers can create new terrain types knowing they'll work with all systems
+
+---
+
 ## Phase 8: Quest & Trading Systems (Weeks 17-19)
 
 ### Goals
@@ -981,16 +1259,201 @@ Achieve 80%+ test coverage with comprehensive unit and integration tests, update
 
 ---
 
+## Phase 14: Procedural Terrain Generation (Weeks 28-30)
+
+### Goals
+Implement procedural terrain generation using Perlin noise for infinite/large worlds with biome systems and seamless integration with existing chunk-based architecture.
+
+### Motivation
+- Enable large-scale exploration gameplay beyond hand-crafted levels
+- Support infinite world generation for extended playtime
+- Create varied terrain without extensive manual level design
+- Leverage existing chunk streaming architecture from Phase 1
+- Test all game systems across diverse terrain configurations automatically
+
+### Steps
+
+**14.1 Noise Generation Foundation**
+- Create `NoiseGenerator.cs` utility class:
+  - Perlin noise implementation (or use Unity Mathematics)
+  - Octave-based noise (multiple frequencies for detail)
+  - Seed-based generation for reproducibility
+  - Methods: `GetNoiseValue(x, y, seed, scale, octaves)`
+  - Support for multiple noise types: Perlin, Simplex, Voronoi
+- Create `BiomeDefinition.cs` ScriptableObject:
+  - Biome name, color gradient
+  - Terrain type distribution (weighted list mapping noise values to TerrainType SOs)
+  - Temperature/moisture thresholds
+  - Special features (lakes, mountains, forests)
+  - Resource spawn chances
+- Write unit tests for noise generation:
+  - Test deterministic output (same seed = same terrain)
+  - Validate value ranges (0-1 normalization)
+  - Test octave combinations
+  - Performance test: 10,000 noise samples < 16ms
+
+**14.2 Terrain Type Assignment**
+- Create `ProceduralTerrainGenerator.cs`:
+  - Method: `GenerateChunk(chunkCoord, seed)` returns populated HexChunk
+  - Use noise to determine terrain type per cell
+  - Apply biome rules based on position
+  - Support terrain transition smoothing between biomes
+  - Integration with existing HexGrid chunk system
+- Implement terrain type mapping strategy:
+  - Noise value ranges map to TerrainType ScriptableObjects
+  - Example distribution:
+    - 0.0-0.25: Water (impassable)
+    - 0.25-0.45: Grass (cost 1)
+    - 0.45-0.60: Forest (cost 2)
+    - 0.60-0.75: Desert (cost 1)
+    - 0.75-0.90: Mountain (cost 3)
+    - 0.90-1.0: Snow (cost 2)
+  - Height map generation for elevation-based terrain
+  - Ensure all 6 terrain types are represented for testing purposes
+- Add configuration ScriptableObject:
+  - `WorldGenerationSettings.cs`: seed, scale, biome frequency, terrain distribution weights
+  - Configurable noise octaves, persistence, lacunarity
+  - Min/max terrain type frequencies (ensure 10%+ of each type for testing)
+
+**14.3 Multi-Layer Biome System**
+- Implement multi-layered noise for realistic biomes:
+  - **Temperature map**: Affects Snow (cold) vs Desert (hot) vs Grass (moderate)
+  - **Moisture map**: Affects Forest (wet) vs Desert (dry)
+  - **Elevation map**: Affects Mountain (high) vs Plains (low) vs Water (lowest)
+  - Combine layers: `TerrainType = f(temperature, moisture, elevation)`
+- Create biome blending:
+  - Transition zones between biomes (5-10 cell width)
+  - Weighted terrain type selection in borders using blend functions
+  - Avoid harsh biome boundaries with smooth noise transitions
+  - Edge feathering for visual cohesion
+- Define standard biome types:
+  - **Grasslands**: 60% Grass, 30% Forest, 10% Water
+  - **Desert**: 70% Desert, 20% Mountain, 10% Grass (oasis)
+  - **Tundra**: 60% Snow, 30% Mountain, 10% Grass
+  - **Forest**: 70% Forest, 20% Grass, 10% Water
+  - **Mountains**: 60% Mountain, 30% Snow (peaks), 10% Grass (foothills)
+  - **Ocean**: 90% Water, 10% Grass (coastline)
+- Ensure diverse terrain for testing:
+  - Each biome must contain at least 3 different terrain types
+  - No biome entirely composed of impassable terrain
+  - Pathfinding test paths must cross multiple terrain types
+
+**14.4 Integration with Chunk Streaming**
+- Modify `HexGrid.LoadChunk()`:
+  - Check if chunk exists in save data
+  - If not saved, generate procedurally using `ProceduralTerrainGenerator`
+  - Cache generated chunks to avoid regeneration on re-entry
+  - Store generation seed in GridData for consistency
+- Add world modification persistence:
+  - Track player-modified cells separately from procedural baseline
+  - Override procedural generation with saved modifications
+  - Only save delta from procedural baseline (efficient storage)
+  - Example: Player flattens mountain → save only that cell, rest regenerates
+- Implement chunk generation queue:
+  - Generate chunks asynchronously (coroutine-based or async/await)
+  - Prioritize chunks near player/camera (visible first)
+  - Background generation for distant chunks (low priority)
+  - Limit concurrent generation tasks (max 3) for performance
+- Add procedural generation mode toggle:
+  - Scene Inspector setting: `Use Procedural Generation` boolean
+  - If disabled, use hand-crafted terrain (backwards compatibility)
+  - If enabled, generate all new chunks procedurally
+
+**14.5 Testing Strategy for Procedural Terrain**
+- Create test scene with procedural generation:
+  - `TestScene_ProceduralTerrains.unity`:
+    - Load 10x10 chunks procedurally (1600 cells)
+    - Spawn player at center
+    - Spawn test NPCs on each terrain type
+    - Verify all 6 terrain types present
+- Implement automated terrain diversity validation:
+  - `ProceduralTerrainValidator.cs` utility:
+    - Analyze generated chunks
+    - Calculate terrain type distribution percentages
+    - Assert each terrain type present (>5% of total)
+    - Detect invalid patterns (e.g., isolated impassable cells)
+    - Log warnings if distribution skewed
+- Add pathfinding stress tests on procedural terrain:
+  - Generate 100 random start/goal pairs
+  - Verify pathfinding succeeds on walkable terrain
+  - Verify pathfinding crosses multiple terrain types
+  - Measure average path cost vs straight-line distance
+- Update `GridVisualizer.SetupTestCells()` for procedural mode:
+  - Auto-detect terrain types in loaded chunks
+  - Create test scenarios using procedurally-placed terrains
+  - Highlight one cell of each terrain type for manual inspection
+  - Display biome map overlay (toggle with key)
+
+**14.6 Special Features & Resource Placement**
+- Add procedural feature placement:
+  - Resource nodes (trees on Forest, rocks on Mountain, ore on Desert)
+  - Natural structures (lakes, clearings, ruins)
+  - Use secondary noise layers for feature distribution
+  - Clustering behavior: Features group together (forests of trees, not scattered)
+- Create `FeatureDefinition.cs` ScriptableObject:
+  - Feature name, prefab/sprite
+  - Spawn chance per biome (0.0-1.0)
+  - Terrain type requirements (list of allowed terrains)
+  - Clustering parameters (cluster size, density)
+  - Gameplay purpose (resource, obstacle, decoration)
+- Implement feature spawning logic:
+  - Place features after terrain generation
+  - Validate placement (walkable terrain, not occupied, not blocking paths)
+  - Spawn in clusters using noise (e.g., 3-7 trees together)
+  - Ensure features don't block critical paths (maintain accessibility)
+- Create feature distribution map for testing:
+  - Verify resources evenly distributed across world
+  - Ensure all biomes have appropriate features
+  - No feature type dominates (balance resource availability)
+
+**14.7 Debug & Visualization Tools**
+- Create `WorldPreviewWindow.cs` editor tool:
+  - Display noise maps as textures (grayscale visualization)
+  - Preview biome distribution (color-coded by biome type)
+  - Adjustable parameters with real-time preview
+  - Export heightmap/biome map as PNG images for documentation
+  - Seed input field for reproducible generation
+- Add world seed display in game UI:
+  - Show current world seed in settings menu
+  - Allow seed input for world regeneration (new game)
+  - Copy seed to clipboard button
+  - Display seed in save file metadata
+- Create debug commands (dev builds only):
+  - `RegenerateChunk(x, y)`: Force regenerate chunk at coordinates
+  - `SetBiome(x, y, biomeType)`: Override biome in region
+  - `ClearProceduralCache()`: Clear all cached generated chunks
+  - `ExportWorldMap()`: Save terrain map as image file
+
+### Deliverables
+- ✅ Deterministic procedural terrain generation with Perlin noise
+- ✅ Multi-biome world with smooth transitions (6 biome types)
+- ✅ Integration with chunk streaming system (no refactoring needed)
+- ✅ Persistent world modifications over procedural baseline
+- ✅ Special feature placement (resources, structures, clustered)
+- ✅ Terrain diversity validation ensuring all 6 types present
+- ✅ Editor preview tools for world design and debugging
+- ✅ Configurable via ScriptableObjects (designers can adjust without code)
+- ✅ Automated testing across diverse procedural terrains
+
+### Testing Strategy
+- Generate 1000 chunks, verify no crashes or infinite loops
+- Test identical terrain with same seed (determinism validation)
+- Verify biome transitions are visually smooth (no harsh edges)
+- Test chunk generation performance (target <16ms per chunk on mobile)
+- Validate feature spawn rates match expected probabilities (±5%)
+- Pathfinding test suite across 100 procedural maps
+- Ensure all 6 terrain types present in any 20x20 chunk region
+
+### Estimated Commits
+~12-15 commits (noise generator → terrain mapping → biomes → chunk integration → features → diversity validation → editor tools → testing → optimization)
+
+---
+
 ## Further Considerations & Open Questions
 
 ### 1. Procedural World Generation
-**Question**: Should we add a Phase 14 for procedural terrain/biome generation?  
-**Context**: Phases 1-3 architected for large worlds with chunking, but no procedural generation implemented yet.  
-**Options**:
-- **Defer to post-v1.0**: Focus on hand-crafted content initially
-- **Add Phase 14 (Weeks 28-30)**: Implement Perlin noise terrain generation, biome system, resource distribution
-  
-**Recommendation**: Defer unless procedural content is critical for initial release. Architecture supports it, can add later.
+**Status**: ✅ Added as Phase 14 (Weeks 28-30)  
+**Decision**: Implement after Phase 13 (post-v1.0) to ensure all game systems tested on diverse terrains. Architecture ready, deferred for scope control.
 
 ### 2. Multiplayer / Async PvP
 **Question**: Is multiplayer a future goal?  

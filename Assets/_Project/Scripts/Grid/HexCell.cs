@@ -23,10 +23,10 @@ namespace FollowMyFootsteps.Grid
         public HexChunk Chunk { get; internal set; }
 
         /// <summary>
-        /// Terrain type index (references TerrainType ScriptableObject in Phase 1.5).
-        /// For now, 0 = grass, 1 = water, 2 = mountain, etc.
+        /// Terrain type for this cell.
+        /// Phase 1.5: Now uses TerrainType ScriptableObject.
         /// </summary>
-        public int TerrainTypeIndex { get; set; }
+        public TerrainType Terrain { get; set; }
 
         /// <summary>
         /// Cell state flags using bitwise operations for efficient storage.
@@ -110,10 +110,10 @@ namespace FollowMyFootsteps.Grid
         /// <summary>
         /// Creates a new hex cell.
         /// </summary>
-        public HexCell(HexCoord coordinates, int terrainTypeIndex = 0)
+        public HexCell(HexCoord coordinates, TerrainType terrain = null)
         {
             Coordinates = coordinates;
-            TerrainTypeIndex = terrainTypeIndex;
+            Terrain = terrain;
             stateFlags = (byte)(CellState.Walkable | CellState.Buildable); // Default: walkable and buildable
         }
 
@@ -123,25 +123,20 @@ namespace FollowMyFootsteps.Grid
 
         /// <summary>
         /// Gets the movement cost for this cell based on terrain type.
-        /// Returns 999 if not walkable (impassable).
-        /// Phase 1.5 will use TerrainType ScriptableObject for this.
+        /// Returns 999 if not walkable (impassable) or if terrain is null.
+        /// Phase 1.5: Now uses TerrainType ScriptableObject.
         /// </summary>
         public int GetMovementCost()
         {
             if (!IsWalkable)
                 return 999;
 
-            // Temporary hardcoded costs until TerrainType SO is implemented
-            return TerrainTypeIndex switch
-            {
-                0 => 1,   // Grass
-                1 => 999, // Water (impassable)
-                2 => 3,   // Mountain
-                3 => 2,   // Forest
-                4 => 1,   // Desert
-                5 => 2,   // Snow
-                _ => 1
-            };
+            // If terrain is null, return default cost
+            if (Terrain == null)
+                return 1;
+
+            // Use terrain's movement cost
+            return Terrain.MovementCost;
         }
 
         #endregion
@@ -167,7 +162,8 @@ namespace FollowMyFootsteps.Grid
 
         public override string ToString()
         {
-            return $"HexCell {Coordinates} | Terrain: {TerrainTypeIndex} | Walkable: {IsWalkable} | Occupied: {IsOccupied}";
+            string terrainName = Terrain != null ? Terrain.TerrainName : "None";
+            return $"HexCell {Coordinates} | Terrain: {terrainName} | Walkable: {IsWalkable} | Occupied: {IsOccupied}";
         }
 
         #endregion

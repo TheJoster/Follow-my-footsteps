@@ -38,6 +38,28 @@ namespace FollowMyFootsteps.Grid
         [Tooltip("Color for occupied cells")]
         private Color occupiedColor = new Color(0f, 0f, 1f, 0.3f);
 
+        [Header("Test Terrain Types")]
+        [SerializeField]
+        [Tooltip("Terrain types for test cells (assign in Inspector)")]
+        private TerrainType[] testTerrains = new TerrainType[6];
+
+        [Header("Test Pattern Configuration")]
+        [SerializeField]
+        [Tooltip("Enable comprehensive test patterns using TerrainTestHelper")]
+        private bool useComprehensiveTestPatterns = true;
+
+        [SerializeField]
+        [Tooltip("Enable Pattern 1: 6x6 terrain type grid")]
+        private bool enablePattern1_TerrainGrid = true;
+
+        [SerializeField]
+        [Tooltip("Enable Pattern 2: Pathfinding test course")]
+        private bool enablePattern2_PathfindingCourse = true;
+
+        [SerializeField]
+        [Tooltip("Enable Pattern 3: Combat arena")]
+        private bool enablePattern3_CombatArena = true;
+
         #endregion
 
         #region Fields
@@ -70,27 +92,223 @@ namespace FollowMyFootsteps.Grid
         private System.Collections.IEnumerator SetupTestCells()
         {
             yield return new WaitForSeconds(0.5f); // Wait for grid to initialize
+
+            if (useComprehensiveTestPatterns)
+            {
+                // Use TerrainTestHelper for comprehensive test patterns
+                SetupComprehensiveTestPatterns();
+            }
+            else
+            {
+                // Legacy test pattern: Individual test cells
+                SetupLegacyTestCells();
+            }
+
+            // Mark all chunks as dirty so they re-render with new terrain types
+            RefreshAllChunks();
+        }
+
+        /// <summary>
+        /// Sets up comprehensive test patterns.
+        /// Pattern 1: 6x6 terrain type grid (centered at origin)
+        /// Pattern 2: Pathfinding test course (starts at Q=20, R=0)
+        /// Pattern 3: Combat arena (centered at Q=40, R=0)
+        /// </summary>
+        private void SetupComprehensiveTestPatterns()
+        {
+            Debug.Log("=== Setting up comprehensive test patterns ===");
+
+            // Helper to get terrain by index, with null check
+            TerrainType GetTerrain(int index)
+            {
+                if (testTerrains != null && index >= 0 && index < testTerrains.Length)
+                    return testTerrains[index];
+                return null;
+            }
+
+            // Pattern 1: 6x6 Terrain Type Grid (centered at origin for easy visibility)
+            if (enablePattern1_TerrainGrid)
+            {
+                CreateTestGridWithAllTerrains(new HexCoord(0, 0), GetTerrain);
+                Debug.Log("Pattern 1: 6x6 Terrain Grid created at origin (0,0)");
+            }
+
+            // Pattern 2: Pathfinding Test Course (offset to the right)
+            if (enablePattern2_PathfindingCourse)
+            {
+                CreatePathfindingTestCourse(new HexCoord(20, 0), GetTerrain);
+                Debug.Log("Pattern 2: Pathfinding Test Course created starting at (20,0)");
+            }
+
+            // Pattern 3: Combat Arena (further offset to the right)
+            if (enablePattern3_CombatArena)
+            {
+                CreateCombatArena(new HexCoord(40, 0), GetTerrain);
+                Debug.Log("Pattern 3: Combat Arena created at center (40,0)");
+            }
+
+            Debug.Log("✓ All 3 test patterns created successfully");
+        }
+
+        /// <summary>
+        /// Creates a test grid with all terrain types distributed in a pattern.
+        /// </summary>
+        private void CreateTestGridWithAllTerrains(HexCoord centerCoord, System.Func<int, TerrainType> GetTerrain)
+        {
+            var testPattern = new (int q, int r, int terrainIndex)[]
+            {
+                // Row 0-1: Grass (indices 0-1)
+                (-3, 3, 0), (-2, 3, 0), (-3, 2, 0), (-2, 2, 0),
+                
+                // Row 0-1: Water (indices 2-3)
+                (-1, 3, 1), (0, 3, 1), (-1, 2, 1), (0, 2, 1),
+                
+                // Row 0-1: Mountain (indices 4-5)
+                (1, 2, 2), (2, 1, 2), (1, 1, 2), (2, 0, 2),
+                
+                // Row 2-3: Forest (indices 0-1)
+                (-3, 1, 3), (-2, 1, 3), (-3, 0, 3), (-2, 0, 3),
+                
+                // Row 2-3: Desert (indices 2-3)
+                (-1, 1, 4), (0, 1, 4), (-1, 0, 4), (0, 0, 4),
+                
+                // Row 2-3: Snow (indices 4-5)
+                (1, 0, 5), (2, -1, 5), (1, -1, 5), (2, -2, 5),
+            };
+
+            foreach (var (q, r, terrainIndex) in testPattern)
+            {
+                var cell = hexGrid.GetCell(new HexCoord(centerCoord.q + q, centerCoord.r + r));
+                if (cell != null)
+                {
+                    cell.Terrain = GetTerrain(terrainIndex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a pathfinding test course with obstacles and varied terrain costs.
+        /// </summary>
+        private void CreatePathfindingTestCourse(HexCoord startCoord, System.Func<int, TerrainType> GetTerrain)
+        {
+            var coursePattern = new (int offsetQ, int offsetR, int terrainIndex)[]
+            {
+                // Start position (Grass)
+                (0, 0, 0),
+                
+                // Path forward (varied terrain costs)
+                (1, 0, 3),  // Forest (cost 2)
+                (2, -1, 4), // Desert (cost 1)
+                (3, -1, 2), // Mountain (cost 3)
+                (4, -2, 3), // Forest (cost 2)
+                (5, -2, 0), // Goal (Grass, cost 1)
+                
+                // Water obstacles (impassable) on north side
+                (1, 1, 1),
+                (2, 0, 1),
+                (3, 0, 1),
+                (4, -1, 1),
+                
+                // Water obstacles on south side
+                (1, -1, 1),
+                (2, -2, 1),
+                (3, -2, 1),
+                (4, -3, 1),
+            };
+
+            foreach (var (offsetQ, offsetR, terrainIndex) in coursePattern)
+            {
+                var cell = hexGrid.GetCell(new HexCoord(startCoord.q + offsetQ, startCoord.r + offsetR));
+                if (cell != null)
+                {
+                    cell.Terrain = GetTerrain(terrainIndex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a combat arena with mixed terrain.
+        /// </summary>
+        private void CreateCombatArena(HexCoord centerCoord, System.Func<int, TerrainType> GetTerrain)
+        {
+            var arenaPattern = new (int offsetQ, int offsetR, int terrainIndex)[]
+            {
+                // Center: Open terrain (Grass)
+                (0, 0, 0),
+                
+                // Ring 1: Mixed open terrain
+                (1, 0, 4),   // Desert (east)
+                (0, 1, 0),   // Grass (northeast)
+                (-1, 1, 4),  // Desert (northwest)
+                (-1, 0, 0),  // Grass (west)
+                (0, -1, 4),  // Desert (southwest)
+                (1, -1, 0),  // Grass (southeast)
+                
+                // Ring 2: Cover terrain (Mountains and Forests)
+                (2, 0, 2),   // Mountain (east)
+                (1, 1, 3),   // Forest (northeast)
+                (-1, 2, 2),  // Mountain (north)
+                (-2, 1, 3),  // Forest (northwest)
+                (-2, 0, 2),  // Mountain (west)
+                (-1, -1, 3), // Forest (southwest)
+                (0, -2, 2),  // Mountain (south)
+                (2, -2, 3),  // Forest (southeast)
+                
+                // Ring 3: Hazards
+                (3, 0, 1),   // Water (east)
+                (2, 1, 5),   // Snow (northeast)
+                (0, 2, 1),   // Water (north)
+                (-2, 2, 5),  // Snow (northwest)
+                (-3, 1, 1),  // Water (west)
+                (-2, -1, 5), // Snow (southwest)
+                (0, -3, 1),  // Water (south)
+                (2, -3, 5)   // Snow (southeast)
+            };
+
+            foreach (var (offsetQ, offsetR, terrainIndex) in arenaPattern)
+            {
+                var cell = hexGrid.GetCell(new HexCoord(centerCoord.q + offsetQ, centerCoord.r + offsetR));
+                if (cell != null)
+                {
+                    cell.Terrain = GetTerrain(terrainIndex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Legacy test pattern: Sets individual cells for basic testing.
+        /// Kept for backward compatibility and simple debugging scenarios.
+        /// </summary>
+        private void SetupLegacyTestCells()
+        {
+            // Helper to get terrain by index, with null check
+            TerrainType GetTerrain(int index)
+            {
+                if (testTerrains != null && index >= 0 && index < testTerrains.Length)
+                    return testTerrains[index];
+                return null;
+            }
             
             // Set some cells to different states for testing
             var cell1 = hexGrid.GetCell(new HexCoord(5, 5));
             if (cell1 != null)
             {
                 cell1.IsOccupied = true;
-                cell1.TerrainTypeIndex = 3; // Forest (dark green)
+                cell1.Terrain = GetTerrain(3); // Forest (dark green)
                 Debug.Log("Set cell (5,5) to Occupied + Forest");
             }
             
             var cell2 = hexGrid.GetCell(new HexCoord(10, 10));
             if (cell2 != null)
             {
-                cell2.TerrainTypeIndex = 2; // Mountain (gray, walkable with cost 3)
+                cell2.Terrain = GetTerrain(2); // Mountain (gray, walkable with cost 3)
                 Debug.Log("Set cell (10,10) to Mountain (gray, cost 3)");
             }
             
             var cell3 = hexGrid.GetCell(new HexCoord(7, 3));
             if (cell3 != null)
             {
-                cell3.TerrainTypeIndex = 1; // Water (blue)
+                cell3.Terrain = GetTerrain(1); // Water (blue)
                 cell3.IsWalkable = false;
                 Debug.Log("Set cell (7,3) to Water (blue, non-walkable)");
             }
@@ -98,18 +316,23 @@ namespace FollowMyFootsteps.Grid
             var cell4 = hexGrid.GetCell(new HexCoord(12, 8));
             if (cell4 != null)
             {
-                cell4.TerrainTypeIndex = 4; // Desert (yellow)
+                cell4.Terrain = GetTerrain(4); // Desert (yellow)
                 Debug.Log("Set cell (12,8) to Desert (yellow)");
             }
             
             var cell5 = hexGrid.GetCell(new HexCoord(3, 12));
             if (cell5 != null)
             {
-                cell5.TerrainTypeIndex = 5; // Snow (white)
+                cell5.Terrain = GetTerrain(5); // Snow (white)
                 Debug.Log("Set cell (3,12) to Snow (white)");
             }
-            
-            // Mark all chunks as dirty so they re-render with new terrain types
+        }
+
+        /// <summary>
+        /// Marks all chunks as dirty to force re-rendering after terrain changes.
+        /// </summary>
+        private void RefreshAllChunks()
+        {
             for (int q = 0; q < 10; q++)
             {
                 for (int r = 0; r < 10; r++)
@@ -395,11 +618,10 @@ namespace FollowMyFootsteps.Grid
             boxStyle.normal.textColor = Color.white;
             boxStyle.fontSize = 12;
 
-            // Terrain type names
-            string[] terrainNames = { "Grass", "Water", "Mountain", "Forest", "Desert", "Snow" };
-            string terrainName = hoveredCell.TerrainTypeIndex >= 0 && hoveredCell.TerrainTypeIndex < terrainNames.Length
-                ? terrainNames[hoveredCell.TerrainTypeIndex]
-                : "Unknown";
+            // Get terrain name from TerrainType ScriptableObject
+            string terrainName = hoveredCell.Terrain != null 
+                ? hoveredCell.Terrain.TerrainName 
+                : "None";
 
             string info = $"Hovered Cell Info\n" +
                           $"Coord: ({hoveredCell.Coordinates.q}, {hoveredCell.Coordinates.r})\n" +

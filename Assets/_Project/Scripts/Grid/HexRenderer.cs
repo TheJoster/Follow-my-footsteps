@@ -317,27 +317,64 @@ namespace FollowMyFootsteps.Grid
 
             // Add SpriteRenderer
             SpriteRenderer spriteRenderer = cellObj.AddComponent<SpriteRenderer>();
-            spriteRenderer.sprite = GetTerrainSprite(cell.TerrainTypeIndex);
+            spriteRenderer.sprite = GetTerrainSprite(cell);
             spriteRenderer.material = spriteMaterial;
             spriteRenderer.sortingLayerName = "Terrain";
             spriteRenderer.sortingOrder = 0;
+
+            // Apply color tint from terrain type
+            if (cell.Terrain != null)
+            {
+                spriteRenderer.color = cell.Terrain.ColorTint;
+            }
 
             // Apply scale
             cellObj.transform.localScale = Vector3.one * spriteScale;
         }
 
         /// <summary>
-        /// Gets the sprite for a terrain type index.
+        /// Gets the sprite for a hex cell based on its terrain type.
+        /// Falls back to procedurally generated sprite if TerrainType has no sprite.
         /// </summary>
-        private Sprite GetTerrainSprite(int terrainTypeIndex)
+        private Sprite GetTerrainSprite(HexCell cell)
         {
-            if (terrainTypeIndex >= 0 && terrainTypeIndex < terrainSprites.Length)
+            // If cell has no terrain, use fallback
+            if (cell.Terrain == null)
             {
-                return terrainSprites[terrainTypeIndex];
+                Debug.LogWarning($"Cell at {cell.Coordinates} has no terrain type assigned!");
+                return GetFallbackSprite(0); // Default to grass-like sprite
             }
 
-            // Return null if sprite not found (will show missing sprite in Unity)
-            Debug.LogWarning($"Terrain sprite for index {terrainTypeIndex} not found!");
+            // If terrain has a sprite assigned, use it
+            if (cell.Terrain.Sprite != null)
+            {
+                return cell.Terrain.Sprite;
+            }
+
+            // Otherwise, use procedurally generated fallback sprite
+            // This maintains backward compatibility during transition to sprite assets
+            return GetFallbackSprite(System.Array.IndexOf(terrainSprites, null));
+        }
+
+        /// <summary>
+        /// Gets a fallback sprite from the procedurally generated array.
+        /// Used during transition to ScriptableObject-based sprites.
+        /// </summary>
+        private Sprite GetFallbackSprite(int index)
+        {
+            if (index >= 0 && index < terrainSprites.Length && terrainSprites[index] != null)
+            {
+                return terrainSprites[index];
+            }
+
+            // Return first available sprite or null
+            foreach (var sprite in terrainSprites)
+            {
+                if (sprite != null)
+                    return sprite;
+            }
+
+            Debug.LogWarning($"No fallback sprite available!");
             return null;
         }
 
