@@ -14,26 +14,12 @@ namespace FollowMyFootsteps.Tests.EditMode
         /// </summary>
         public static TerrainType CreateTerrain(string name, int movementCost, bool canBuild = true, bool canModify = true)
         {
+            Debug.Log($"TestTerrainFactory.CreateTerrain: Creating '{name}' with movementCost={movementCost}");
             TerrainType terrain = ScriptableObject.CreateInstance<TerrainType>();
-            
-            // Use reflection to set private fields since we're in tests
-            var terrainNameField = typeof(TerrainType).GetField("terrainName", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var movementCostField = typeof(TerrainType).GetField("movementCost", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var canBuildField = typeof(TerrainType).GetField("canBuild", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var canModifyField = typeof(TerrainType).GetField("canModify", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var colorTintField = typeof(TerrainType).GetField("colorTint", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-            terrainNameField?.SetValue(terrain, name);
-            movementCostField?.SetValue(terrain, movementCost);
-            canBuildField?.SetValue(terrain, canBuild);
-            canModifyField?.SetValue(terrain, canModify);
-            colorTintField?.SetValue(terrain, Color.white);
-
+            terrain.hideFlags = HideFlags.HideAndDontSave; // Prevent Unity from destroying this test object
+            Debug.Log($"  Created instance, calling InitializeForTest...");
+            terrain.InitializeForTest(name, movementCost, canBuild, canModify);
+            Debug.Log($"  Returned terrain: TerrainName='{terrain.TerrainName}', MovementCost={terrain.MovementCost}");
             return terrain;
         }
 
@@ -49,12 +35,25 @@ namespace FollowMyFootsteps.Tests.EditMode
             private static TerrainType desertTerrain;
             private static TerrainType snowTerrain;
 
-            public static TerrainType Grass => grassTerrain ?? (grassTerrain = CreateTerrain("Grass", 1, true, true));
-            public static TerrainType Water => waterTerrain ?? (waterTerrain = CreateTerrain("Water", 999, false, true));
-            public static TerrainType Mountain => mountainTerrain ?? (mountainTerrain = CreateTerrain("Mountain", 3, false, true));
-            public static TerrainType Forest => forestTerrain ?? (forestTerrain = CreateTerrain("Forest", 2, true, true));
-            public static TerrainType Desert => desertTerrain ?? (desertTerrain = CreateTerrain("Desert", 1, true, true));
-            public static TerrainType Snow => snowTerrain ?? (snowTerrain = CreateTerrain("Snow", 2, true, true));
+            static Standard()
+            {
+                // Force initialization in static constructor to ensure they're created once
+                grassTerrain = CreateTerrain("Grass", 1, true, true);
+                waterTerrain = CreateTerrain("Water", 999, false, true);
+                mountainTerrain = CreateTerrain("Mountain", 3, false, true);
+                forestTerrain = CreateTerrain("Forest", 2, true, true);
+                desertTerrain = CreateTerrain("Desert", 1, true, true);
+                snowTerrain = CreateTerrain("Snow", 2, true, true);
+                
+                Debug.Log($"Standard terrains initialized: Grass={grassTerrain.MovementCost}, Water={waterTerrain.MovementCost}, Mountain={mountainTerrain.MovementCost}, Forest={forestTerrain.MovementCost}, Desert={desertTerrain.MovementCost}, Snow={snowTerrain.MovementCost}");
+            }
+
+            public static TerrainType Grass => grassTerrain;
+            public static TerrainType Water => waterTerrain;
+            public static TerrainType Mountain => mountainTerrain;
+            public static TerrainType Forest => forestTerrain;
+            public static TerrainType Desert => desertTerrain;
+            public static TerrainType Snow => snowTerrain;
         }
     }
 }

@@ -72,6 +72,24 @@ namespace FollowMyFootsteps.Grid
 
         #endregion
 
+        #region Test Support
+
+        /// <summary>
+        /// Initializes terrain type for testing. Only available in editor/tests.
+        /// </summary>
+        public void InitializeForTest(string name, int cost, bool buildable = true, bool modifiable = true, Color? tint = null)
+        {
+            Debug.Log($"InitializeForTest called: name={name}, cost={cost}, buildable={buildable}, modifiable={modifiable}");
+            terrainName = name;
+            movementCost = cost;
+            canBuild = buildable;
+            canModify = modifiable;
+            colorTint = tint ?? Color.white;
+            Debug.Log($"After setting: terrainName={terrainName}, movementCost={movementCost}, MovementCost property={MovementCost}");
+        }
+
+        #endregion
+
         #region Validation
 
         private void OnValidate()
