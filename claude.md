@@ -5,9 +5,16 @@ OnlyHuman is framework to guide AI models in code generations following human re
 
 ### Tech Stack
 - **Language**: Python, C#, HTML, CSS, Flutter, Dart
-- **Framework**: Flutter, .NET, Unity, WinUI
+- **Framework**: Flutter, .NET, Unity 6 (6000.0.25f1), WinUI
 - **Database**: Azure SQL, Azure mySQL
 - **Key Libraries**: This will differ per project, so look for a file called KeyLibraries.md
+
+### Current Project: Follow My Footsteps
+- **Engine**: Unity 6000.0.25f1 (Unity 6)
+- **Template**: 2D (STP) - Standard Template Project for 2D games
+- **Language**: C# (.NET Standard 2.1)
+- **Testing**: Unity Test Framework (NUnit 3.5)
+- **Target Platform**: Mobile (iOS/Android)
 
 ## Code Standards
 

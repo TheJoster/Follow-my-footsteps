@@ -8,13 +8,15 @@
 
 ## Core Dependencies
 
-**Status**: 🚧 To be populated during project planning phase
+**Status**: ✅ Active Development
 
 ### Primary Framework
-- **[Framework Name]** - Version X.X.X
-  - Why: [Reason for choosing this framework]
-  - Use for: [Primary use cases in this project]
-  - Docs: `[/org/repo]` or package link
+- **Unity** - Version 6000.0.25f1 (Unity 6)
+  - Why: Industry-standard game engine with excellent 2D support, mobile optimization, and C# scripting
+  - Use for: 2D hex-based RPG development with Standard Template Project (STP)
+  - Docs: https://docs.unity3d.com/6000.0/Documentation/Manual/
+  - Template: 2D (STP) - Standard 2D template optimized for mobile games
+  - Platform: Windows development, targeting mobile deployment
 
 ### Backend/API
 - **[Library Name]** - Version X.X.X
@@ -39,8 +41,11 @@
 ## Development Tools
 
 ### Testing
-- **[Testing Framework]** - For unit/integration tests
-- **[E2E Framework]** - For end-to-end testing
+- **Unity Test Framework** - Package `com.unity.test-framework`
+  - Built-in NUnit 3.5 framework for EditMode and PlayMode tests
+  - Use for: Unit tests (EditMode), Integration tests (PlayMode)
+  - Requires: Manual installation via Package Manager
+  - Target: 80%+ code coverage for core systems
 
 ### Code Quality
 - **[Linter]** - Code style enforcement
