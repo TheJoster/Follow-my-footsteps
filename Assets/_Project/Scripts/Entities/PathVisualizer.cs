@@ -13,11 +13,23 @@ namespace FollowMyFootsteps.Entities
     {
         [Header("Visual Settings")]
         [SerializeField]
-        [Tooltip("Color for valid paths within movement range")]
-        private Color validPathColor = new Color(0f, 1f, 0f, 0.8f); // Green
+        [Tooltip("Color for first turn (within movement range)")]
+        private Color turn1Color = new Color(0f, 1f, 0f, 0.8f); // Green
 
         [SerializeField]
-        [Tooltip("Color for paths that exceed movement range")]
+        [Tooltip("Color for second turn")]
+        private Color turn2Color = new Color(1f, 1f, 0f, 0.8f); // Yellow
+
+        [SerializeField]
+        [Tooltip("Color for third turn")]
+        private Color turn3Color = new Color(1f, 0.5f, 0f, 0.8f); // Orange
+
+        [SerializeField]
+        [Tooltip("Color for fourth+ turn")]
+        private Color turn4PlusColor = new Color(1f, 0f, 1f, 0.8f); // Magenta
+
+        [SerializeField]
+        [Tooltip("Color for invalid/blocked paths")]
         private Color invalidPathColor = new Color(1f, 0f, 0f, 0.8f); // Red
 
         [SerializeField]
@@ -38,6 +50,7 @@ namespace FollowMyFootsteps.Entities
         private GameObject costLabelPrefab;
 
         private LineRenderer lineRenderer;
+        private List<LineRenderer> turnLineRenderers = new List<LineRenderer>();
         private List<GameObject> costLabels = new List<GameObject>();
         private bool isVisible = false;
 
@@ -61,7 +74,61 @@ namespace FollowMyFootsteps.Entities
         }
 
         /// <summary>
+        /// Create a new LineRenderer for a specific turn with appropriate color.
+        /// </summary>
+        private LineRenderer CreateTurnLineRenderer(int turnNumber)
+        {
+            GameObject turnObj = new GameObject($"Turn{turnNumber}Path");
+            turnObj.transform.SetParent(transform);
+            
+            LineRenderer lr = turnObj.AddComponent<LineRenderer>();
+            lr.startWidth = lineWidth;
+            lr.endWidth = lineWidth;
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.sortingLayerName = "Entities";
+            lr.sortingOrder = 1;
+            lr.useWorldSpace = true;
+            lr.numCapVertices = 5;
+            lr.numCornerVertices = 5;
+
+            // Set color based on turn number
+            Color turnColor = GetTurnColor(turnNumber);
+            lr.startColor = turnColor;
+            lr.endColor = turnColor;
+
+            return lr;
+        }
+
+        /// <summary>
+        /// Get the color for a specific turn number.
+        /// </summary>
+        private Color GetTurnColor(int turnNumber)
+        {
+            switch (turnNumber)
+            {
+                case 1: return turn1Color;      // Green
+                case 2: return turn2Color;      // Yellow
+                case 3: return turn3Color;      // Orange
+                default: return turn4PlusColor; // Magenta
+            }
+        }
+
+        /// <summary>
+        /// Clear all turn-specific line renderers.
+        /// </summary>
+        private void ClearTurnLineRenderers()
+        {
+            foreach (LineRenderer lr in turnLineRenderers)
+            {
+                if (lr != null)
+                    Destroy(lr.gameObject);
+            }
+            turnLineRenderers.Clear();
+        }
+
+        /// <summary>
         /// Show a path preview from start to goal.
+        /// Supports multi-turn paths with color-coded segments.
         /// </summary>
         public void ShowPath(HexGrid grid, HexCoord start, List<HexCoord> path, int maxMovement)
         {
@@ -71,48 +138,80 @@ namespace FollowMyFootsteps.Entities
                 return;
             }
 
-            // Calculate path cost
-            int pathCost = Pathfinding.GetPathCost(grid, path);
-            bool isValid = pathCost <= maxMovement;
+            // Clear previous turn line renderers
+            ClearTurnLineRenderers();
 
-            // Set line color based on validity
-            lineRenderer.startColor = isValid ? validPathColor : invalidPathColor;
-            lineRenderer.endColor = isValid ? validPathColor : invalidPathColor;
-
-            // Build line positions (start + all path steps)
-            List<Vector3> positions = new List<Vector3>();
+            // Build path segments by turn
+            List<List<Vector3>> turnSegments = new List<List<Vector3>>();
+            List<int> turnNumbers = new List<int>();
             
-            // Add start position
             Vector3 startPos = HexMetrics.GetWorldPosition(start);
             startPos.z = zOffset;
-            positions.Add(startPos);
+            
+            int accumulatedCost = 0;
+            int currentTurn = 1;
+            List<Vector3> currentSegment = new List<Vector3> { startPos };
 
-            // Add all path positions
-            foreach (HexCoord coord in path)
+            for (int i = 0; i < path.Count; i++)
             {
-                Vector3 pos = HexMetrics.GetWorldPosition(coord);
+                HexCell cell = grid.GetCell(path[i]);
+                int stepCost = cell?.Terrain != null ? cell.Terrain.MovementCost : 1;
+                
+                Vector3 pos = HexMetrics.GetWorldPosition(path[i]);
                 pos.z = zOffset;
-                positions.Add(pos);
+                currentSegment.Add(pos);
+                accumulatedCost += stepCost;
+
+                // Check if we've exceeded movement for this turn
+                bool isLastStep = (i == path.Count - 1);
+                bool exceedsCurrentTurn = accumulatedCost > (currentTurn * maxMovement);
+
+                if (exceedsCurrentTurn || isLastStep)
+                {
+                    // Save current segment
+                    if (currentSegment.Count > 1)
+                    {
+                        turnSegments.Add(new List<Vector3>(currentSegment));
+                        turnNumbers.Add(currentTurn);
+                    }
+
+                    if (exceedsCurrentTurn && !isLastStep)
+                    {
+                        // Start new turn segment
+                        currentTurn++;
+                        currentSegment = new List<Vector3> { pos };
+                    }
+                }
             }
 
-            // Update line renderer
-            lineRenderer.positionCount = positions.Count;
-            lineRenderer.SetPositions(positions.ToArray());
-            lineRenderer.enabled = true;
+            // Create line renderers for each turn
+            for (int i = 0; i < turnSegments.Count; i++)
+            {
+                LineRenderer lr = CreateTurnLineRenderer(turnNumbers[i]);
+                lr.positionCount = turnSegments[i].Count;
+                lr.SetPositions(turnSegments[i].ToArray());
+                lr.enabled = true;
+                turnLineRenderers.Add(lr);
+            }
+
+            // Disable main line renderer (we're using turn-specific ones)
+            lineRenderer.enabled = false;
 
             // Show cost labels if enabled
             if (showCostLabels)
             {
-                ShowCostLabels(grid, path, isValid);
+                int totalCost = Pathfinding.GetPathCost(grid, path);
+                int turnsRequired = Mathf.CeilToInt((float)totalCost / maxMovement);
+                ShowCostLabels(grid, path, turnsRequired, maxMovement);
             }
 
             isVisible = true;
         }
 
         /// <summary>
-        /// Show movement cost at each step of the path.
+        /// Show movement cost and turn information at each step.
         /// </summary>
-        private void ShowCostLabels(HexGrid grid, List<HexCoord> path, bool isValid)
+        private void ShowCostLabels(HexGrid grid, List<HexCoord> path, int turnsRequired, int maxMovement)
         {
             ClearCostLabels();
 
@@ -130,6 +229,9 @@ namespace FollowMyFootsteps.Entities
                 int stepCost = cell.Terrain.MovementCost;
                 accumulatedCost += stepCost;
 
+                // Calculate which turn this step belongs to
+                int turnNumber = Mathf.CeilToInt((float)accumulatedCost / maxMovement);
+
                 // Create cost label
                 Vector3 pos = HexMetrics.GetWorldPosition(path[i]);
                 pos.z = zOffset - 0.1f; // Slightly in front of line
@@ -140,8 +242,8 @@ namespace FollowMyFootsteps.Entities
                 var textMesh = label.GetComponent<TextMesh>();
                 if (textMesh != null)
                 {
-                    textMesh.text = accumulatedCost.ToString();
-                    textMesh.color = isValid ? validPathColor : invalidPathColor;
+                    textMesh.text = $"{accumulatedCost} (T{turnNumber})";
+                    textMesh.color = GetTurnColor(turnNumber);
                 }
 
                 costLabels.Add(label);
@@ -168,6 +270,7 @@ namespace FollowMyFootsteps.Entities
         {
             lineRenderer.enabled = false;
             lineRenderer.positionCount = 0;
+            ClearTurnLineRenderers();
             ClearCostLabels();
             isVisible = false;
         }
@@ -179,6 +282,7 @@ namespace FollowMyFootsteps.Entities
 
         private void OnDestroy()
         {
+            ClearTurnLineRenderers();
             ClearCostLabels();
         }
     }

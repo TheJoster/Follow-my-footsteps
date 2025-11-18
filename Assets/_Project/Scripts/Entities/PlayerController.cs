@@ -119,11 +119,9 @@ namespace FollowMyFootsteps.Entities
             {
                 UpdateMovement();
             }
-            else
-            {
-                // Show path preview when not moving
-                UpdatePathPreview();
-            }
+            
+            // Always show path preview (allows course changes during movement)
+            UpdatePathPreview();
         }
 
         #endregion
@@ -234,12 +232,12 @@ namespace FollowMyFootsteps.Entities
 
         /// <summary>
         /// Update path preview based on pointer position.
-        /// Only works on PC with mouse hover. Mobile uses tap-to-preview.
+        /// Works even during movement to allow course changes.
         /// </summary>
         private void UpdatePathPreview()
         {
 #if UNITY_EDITOR || UNITY_STANDALONE
-            if (!IsAlive || isMoving || InputManager.Instance == null || hexGrid == null)
+            if (!IsAlive || InputManager.Instance == null || hexGrid == null)
             {
                 if (pathVisualizer != null && pathVisualizer.IsVisible)
                 {
@@ -263,9 +261,10 @@ namespace FollowMyFootsteps.Entities
                 return;
             }
 
-            // Calculate path
+            // Calculate path (allow multi-turn paths)
             int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
-            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, hoveredHex, maxMovement);
+            int searchLimit = maxMovement * 10; // Allow searching up to 10 turns ahead
+            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, hoveredHex, searchLimit);
 
             // Show path preview
             if (pathVisualizer != null)
@@ -284,8 +283,8 @@ namespace FollowMyFootsteps.Entities
 
         private void HandleHexClicked(HexCoord clickedCoord)
         {
-            // Only process input during player's turn and if alive
-            if (!IsAlive || isMoving)
+            // Only process input if alive
+            if (!IsAlive)
                 return;
 
             // Don't allow clicking current position
@@ -311,9 +310,10 @@ namespace FollowMyFootsteps.Entities
                 return;
             }
 
-            // First tap - show preview
+            // First tap - show preview (allow multi-turn paths)
             int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
-            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, clickedCoord, maxMovement);
+            int searchLimit = maxMovement * 10; // Allow searching up to 10 turns ahead
+            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, clickedCoord, searchLimit);
 
             if (path == null || path.Count == 0)
             {
@@ -329,24 +329,12 @@ namespace FollowMyFootsteps.Entities
                 return;
             }
 
-            // Calculate and validate path cost
+            // Calculate path cost and turns required
             int pathCost = Pathfinding.GetPathCost(hexGrid, path);
-            if (pathCost > maxMovement)
-            {
-                Debug.LogWarning($"[PlayerController] Path cost ({pathCost}) exceeds movement range ({maxMovement})");
-                
-                // Still show the path in red to indicate it's too far
-                if (pathVisualizer != null)
-                {
-                    pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
-                }
-                previewedCell = clickedCoord;
-                previewedPath = null; // Don't store invalid path
-                return;
-            }
+            int turnsRequired = Mathf.CeilToInt((float)pathCost / maxMovement);
 
             // Show path preview and store for confirmation
-            Debug.Log($"[PlayerController] Previewing path to {clickedCoord} (tap again to confirm)");
+            Debug.Log($"[PlayerController] Previewing path to {clickedCoord}: {path.Count} steps, cost: {pathCost}, turns: {turnsRequired} (tap again to confirm)");
             if (pathVisualizer != null)
             {
                 pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
@@ -365,12 +353,14 @@ namespace FollowMyFootsteps.Entities
         /// Attempts to move the player to the target hex coordinate.
         /// Returns true if movement is valid and initiated.
         /// Uses A* pathfinding to route around obstacles.
+        /// Can be called during movement to change destination.
         /// </summary>
         public bool TryMoveTo(HexCoord targetCoord)
         {
-            // Find path using A* pathfinding
+            // Find path using A* pathfinding (allow multi-turn paths)
             int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
-            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, targetCoord, maxMovement);
+            int searchLimit = maxMovement * 10; // Allow searching up to 10 turns ahead
+            List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, targetCoord, searchLimit);
 
             if (path == null || path.Count == 0)
             {
@@ -378,36 +368,34 @@ namespace FollowMyFootsteps.Entities
                 return false;
             }
 
-            // Calculate path cost
+            // Calculate path cost and turns required
             int pathCost = Pathfinding.GetPathCost(hexGrid, path);
-            if (pathCost > maxMovement)
-            {
-                Debug.LogWarning($"[PlayerController] Path cost ({pathCost}) exceeds movement range ({maxMovement})");
-                return false;
-            }
+            int turnsRequired = Mathf.CeilToInt((float)pathCost / maxMovement);
 
-            Debug.Log($"[PlayerController] Found path to {targetCoord} with {path.Count} steps (cost: {pathCost})");
+            string movementType = isMoving ? "Course change" : "Movement";
+            Debug.Log($"[PlayerController] {movementType} to {targetCoord}: {path.Count} steps, cost: {pathCost}, turns: {turnsRequired}");
 
-            // Initiate movement along path
+            // Initiate movement along path (will override current movement if any)
             MoveTo(path);
             return true;
         }
 
         /// <summary>
         /// Moves the player along a calculated path.
+        /// Can override an existing path to change course mid-movement.
         /// </summary>
         public void MoveTo(List<HexCoord> path)
         {
-            if (isMoving)
-            {
-                Debug.LogWarning("[PlayerController] Already moving, cannot move again!");
-                return;
-            }
-
             if (path == null || path.Count == 0)
             {
                 Debug.LogWarning("[PlayerController] Invalid path provided");
                 return;
+            }
+
+            // Allow course changes: if already moving, just replace the path
+            if (isMoving)
+            {
+                Debug.Log("[PlayerController] Changing course to new destination");
             }
 
             // Hide path preview when starting movement

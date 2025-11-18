@@ -1,7 +1,7 @@
 # Phase 2: Player & Basic Interaction - Setup Guide
 
 **Project**: Follow My Footsteps  
-**Phase**: Phase 2.1 - Input Abstraction Layer  
+**Phase**: Phase 2.1-2.2 Complete  
 **Unity Version**: Unity 6000.2.12f1 (Unity 6)  
 **Status**: In Progress
 
@@ -13,8 +13,8 @@ Phase 2 builds the player system, input handling, camera controls, and turn-base
 
 ### Phase 2 Steps
 - **2.1 Input Abstraction Layer** ✅ Complete
-- **2.2 Player System** 🚧 Next
-- **2.3 Camera Controller** 📋 Planned
+- **2.2 Player System** ✅ Complete
+- **2.3 Camera Controller** 📋 Next
 - **2.4 Turn-Based Simulation Core** 📋 Planned
 
 ---
@@ -153,17 +153,19 @@ if (hexCoord.HasValue)
 
 ---
 
-## 📝 Next Steps - Phase 2.2: Player System
+## 📝 Next Steps - Phase 2.3: Camera Controller
 
 The next phase will implement:
 
-1. **PlayerDefinition.cs** - ScriptableObject with player stats
-2. **PlayerData.cs** - Serializable save data (health, position, inventory)
-3. **PlayerController.cs** - MonoBehaviour controlling player entity
-4. **Movement System** - Integrate with InputManager for click-to-move
-5. **Movement Validation** - Check terrain walkability and bounds
+1. **Install Cinemachine** via Package Manager
+2. **HexCameraController** - Virtual Camera following player
+3. **Smooth Damping** - Professional camera feel
+4. **Zoom Limits** - Mobile-friendly zoom constraints
+5. **Camera Bounds** - Restrict to active chunks
 
 ---
+
+## 📋 Phase 2.2: Player System (Complete)
 
 ## 🧪 Testing Checklist
 
@@ -214,5 +216,103 @@ The input abstraction layer provides several benefits:
 
 ---
 
+## 📋 Phase 2.2: Player System (Complete)
+
+### Objectives
+Implement the player entity with A* pathfinding, visual path preview, combat system, and cross-platform input integration.
+
+### Files Created
+
+```
+Assets/_Project/Scripts/Entities/
+├── PlayerDefinition.cs            ✅ ScriptableObject for player configuration
+├── PlayerData.cs                  ✅ Serializable save data
+├── PlayerController.cs            ✅ Player entity controller with pathfinding
+├── PlayerSpawner.cs               ✅ Auto-spawner with procedural sprite
+└── PathVisualizer.cs              ✅ Real-time path preview system
+
+Assets/_Project/Scripts/Grid/
+└── Pathfinding.cs                 ✅ A* pathfinding algorithm
+
+Assets/_Project/Scripts/Editor/
+└── PlayerDefinitionSetup.cs       ✅ Auto-creates DefaultPlayer asset
+```
+
+### Key Systems
+
+**🎯 Pathfinding (A* Algorithm):**
+- Calculates optimal routes around obstacles (water, etc.)
+- Considers terrain movement costs (mountains = 3, grass = 1)
+- Validates paths within movement range
+- Methods: `FindPath()`, `GetPathCost()`, `GetReachableCells()`
+
+**👁️ Path Visualization:**
+- **LineRenderer** shows path before moving
+- **Green** = valid path within range
+- **Red** = path too expensive/far
+- Platform-specific UX:
+  - **PC**: Hover preview, click to move
+  - **Mobile**: Tap to preview, tap again to confirm
+
+**🎮 Player Controller:**
+- Step-by-step animated movement along path
+- Combat: TakeDamage(), Heal(), Die()
+- Events: OnPlayerMoved, OnPlayerDamaged, OnPlayerDied
+- InputManager integration (auto-subscribes to OnHexClicked)
+
+**💾 Data Architecture:**
+- **PlayerDefinition**: ScriptableObject template (stats, sprites, colors)
+- **PlayerData**: Serializable runtime state (health, position, inventory, quests)
+- **PlayerSpawner**: Auto-loads assets, generates sprites, spawns at (0,0)
+
+### Platform Behavior
+
+**PC (Mouse):**
+```
+Hover cell → Real-time path preview
+Click cell → Immediate movement
+```
+
+**Mobile (Touch):**
+```
+Tap cell      → Show path preview
+Tap same cell → Confirm and move
+Tap different → New preview
+```
+
+### Configuration Required
+
+**Sorting Layers** (Edit → Project Settings → Tags and Layers):
+```
+0. Default
+1. Terrain     ← Hex grid renders here
+2. Environmental
+3. Entities    ← Player and paths render here
+4. UI
+```
+
+### Bug Fixes Applied
+
+1. Sprite visibility (null check preserves procedural sprites)
+2. Z-positioning (player z=-1, terrain z=0)
+3. Sorting layers (Entities above Terrain)
+4. Sprite scaling (40% of hex size)
+5. Platform compilation (mobile-only fields wrapped in preprocessor directives)
+6. Added `HexMetrics.GetNeighbors()` alias method
+
+### Testing Checklist
+
+- [ ] Player spawns as bright cyan circle at (0,0)
+- [ ] **PC**: Hover shows path, click moves immediately
+- [ ] **Mobile**: Tap shows path, second tap moves
+- [ ] Green path for valid moves, red for invalid
+- [ ] Player routes around water automatically
+- [ ] Movement respects terrain costs
+- [ ] Cannot exceed movement range (default: 5)
+- [ ] Smooth step-by-step animation
+- [ ] Path hides when movement starts
+
+---
+
 *Last updated: November 18, 2025*  
-*Phase 2.1 Complete - Input Abstraction Layer*
+*Phase 2.1-2.2 Complete - Input & Player Systems*
