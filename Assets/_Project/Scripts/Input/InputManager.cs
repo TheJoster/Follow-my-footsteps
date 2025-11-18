@@ -13,10 +13,16 @@ namespace FollowMyFootsteps.Input
         #region Singleton
 
         private static InputManager instance;
+        private static bool isQuitting = false;
+        
         public static InputManager Instance
         {
             get
             {
+                // Don't create instance during shutdown
+                if (isQuitting)
+                    return null;
+                    
                 if (instance == null)
                 {
                     instance = FindFirstObjectByType<InputManager>();
@@ -103,6 +109,19 @@ namespace FollowMyFootsteps.Input
                 return;
 
             ProcessInput();
+        }
+
+        private void OnDestroy()
+        {
+            if (instance == this)
+            {
+                isQuitting = true;
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            isQuitting = true;
         }
 
         #endregion

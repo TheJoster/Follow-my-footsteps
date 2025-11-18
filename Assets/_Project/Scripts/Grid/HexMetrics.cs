@@ -150,6 +150,15 @@ namespace FollowMyFootsteps.Grid
             return neighbors;
         }
 
+        /// <summary>
+        /// Gets all 6 neighbors of the specified hex coordinate.
+        /// Alias for GetAllNeighbors.
+        /// </summary>
+        public static List<HexCoord> GetNeighbors(HexCoord coord)
+        {
+            return GetAllNeighbors(coord);
+        }
+
         #endregion
 
         #region Distance & Range
