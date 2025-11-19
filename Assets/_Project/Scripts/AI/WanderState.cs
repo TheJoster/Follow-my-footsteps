@@ -16,11 +16,6 @@ namespace FollowMyFootsteps.AI
         
         private HexCoord homePosition;
         private int wanderRadius;
-        private float minWaitTime;
-        private float maxWaitTime;
-        private float waitTimer;
-        private float waitDuration;
-        private bool isWaiting;
         private HexCoord targetPosition;
         private bool hasRequestedPath;
         private bool isMovingToTarget;

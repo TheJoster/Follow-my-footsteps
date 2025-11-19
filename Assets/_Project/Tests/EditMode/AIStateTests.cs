@@ -19,7 +19,7 @@ namespace FollowMyFootsteps.Tests
         public void SetUp()
         {
             testEntity = new object();
-            idleState = new IdleState(1f, 3f);
+            idleState = new IdleState();
         }
 
         [Test]
@@ -31,14 +31,15 @@ namespace FollowMyFootsteps.Tests
         [Test]
         public void OnEnter_LogsEntry()
         {
-            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"\[IdleState\] Entered\. Will idle for \d+\.\d+s"));
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"\[IdleState\] Entered idle state"));
             idleState.OnEnter(testEntity);
         }
 
         [Test]
         public void OnExit_LogsExit()
         {
-            LogAssert.Expect(LogType.Log, "[IdleState] Exited");
+            idleState.OnEnter(testEntity); // Enter first so we have turns idled
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"\[IdleState\] Exited after \d+ turns"));
             idleState.OnExit(testEntity);
         }
     }
