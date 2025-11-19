@@ -22,4 +22,14 @@ MonoBehaviour:
   Type: 2
   VisionRange: 7
   InitialState: Patrol
+  PatrolWaypoints:
+  - q: 3
+    r: 3
+  - q: 8
+    r: 3
+  - q: 8
+    r: 7
+  - q: 3
+    r: 7
+  PatrolMode: 0
   LootTable: {fileID: 0}

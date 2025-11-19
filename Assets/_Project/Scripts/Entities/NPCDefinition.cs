@@ -8,6 +8,16 @@ namespace FollowMyFootsteps.Entities
     /// <summary>
     /// ScriptableObject defining NPC configuration and behavior.
     /// Phase 4.1 - NPC Data Architecture
+    /// Phase 4.6 - Patrol Waypoint System
+    /// 
+    /// Usage:
+    /// 1. Create asset: Right-click → Create → Follow My Footsteps → NPC Definition
+    /// 2. Configure identity (name, sprite/color)
+    /// 3. Set stats (health, AP, movement speed)
+    /// 4. Choose NPC type (Friendly/Neutral/Hostile)
+    /// 5. Set initial state and vision range
+    /// 6. (Optional) Configure patrol waypoints for Patrol initial state
+    /// 7. (Optional) Assign loot table for drops on death
     /// </summary>
     [CreateAssetMenu(fileName = "NPC_NewNPC", menuName = "Follow My Footsteps/NPC Definition")]
     public class NPCDefinition : ScriptableObject
@@ -74,8 +84,11 @@ namespace FollowMyFootsteps.Entities
         }
         
         /// <summary>
-        /// Get patrol waypoints as HexCoord list
+        /// Get patrol waypoints as HexCoord list for use in PatrolState.
+        /// Converts SerializableHexCoord (Unity-serializable) to HexCoord (gameplay).
+        /// Returns empty list if no waypoints configured.
         /// </summary>
+        /// <returns>List of waypoints in patrol route order</returns>
         public List<HexCoord> GetPatrolWaypoints()
         {
             List<HexCoord> waypoints = new List<HexCoord>();
@@ -88,14 +101,25 @@ namespace FollowMyFootsteps.Entities
     }
     
     /// <summary>
-    /// Serializable version of HexCoord for Unity Inspector
+    /// Serializable version of HexCoord for Unity Inspector waypoint configuration.
+    /// HexCoord struct is not directly serializable by Unity, so we use this wrapper
+    /// with public int fields that Unity can serialize and display in Inspector.
+    /// Phase 4.6 - Patrol Waypoint System
     /// </summary>
     [System.Serializable]
     public class SerializableHexCoord
     {
+        [Tooltip("Axial Q coordinate (column)")]
         public int q;
+        
+        [Tooltip("Axial R coordinate (row)")]
         public int r;
         
+        /// <summary>
+        /// Create a serializable hex coordinate for waypoint configuration
+        /// </summary>
+        /// <param name="q">Axial Q coordinate (column)</param>
+        /// <param name="r">Axial R coordinate (row)</param>
         public SerializableHexCoord(int q, int r)
         {
             this.q = q;

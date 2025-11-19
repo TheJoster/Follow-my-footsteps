@@ -22,4 +22,6 @@ MonoBehaviour:
   Type: 0
   VisionRange: 4
   InitialState: Work
+  PatrolWaypoints: []
+  PatrolMode: 0
   LootTable: {fileID: 0}

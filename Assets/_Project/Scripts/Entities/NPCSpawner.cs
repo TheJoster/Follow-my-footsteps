@@ -5,8 +5,21 @@ using FollowMyFootsteps.Grid;
 namespace FollowMyFootsteps.Entities
 {
     /// <summary>
-    /// Scene component that spawns initial test NPCs
+    /// Scene component that spawns initial test NPCs from configured spawn points.
     /// Phase 4.5 - Initial NPC Types
+    /// Phase 4.6 - Build Compatibility (Resources Loading)
+    /// 
+    /// Usage:
+    /// 1. Add to empty GameObject in scene
+    /// 2. Configure spawn points in Inspector (NPC definition + hex position)
+    /// 3. Enable autoSpawn to spawn NPCs on Start
+    /// 4. NPCs auto-load from Resources/NPCDefinitions/ for builds
+    /// 5. In Editor, uses AssetDatabase to find NPCs if spawn list empty
+    /// 
+    /// Build Compatibility:
+    /// - Editor: Uses AssetDatabase.FindAssets() to auto-populate spawn list
+    /// - Builds: Uses Resources.LoadAll() to load from Resources/NPCDefinitions/
+    /// - Ensure NPCDefinition assets are copied to Resources folder before building
     /// </summary>
     public class NPCSpawner : MonoBehaviour
     {

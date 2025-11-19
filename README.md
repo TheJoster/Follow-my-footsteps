@@ -101,7 +101,7 @@ Follow-my-footsteps/
 
 **Duration**: 27 weeks (~6-7 months)  
 **Target Commits**: 120-150 following conventional commit standards  
-**Current Status**: Phase 4 Complete - NPC Foundation & State Machine ✅ (228 tests passing)
+**Current Status**: Phase 4 Complete - NPC Foundation & State Machine ✅ (228+ tests passing)
 
 ### Phase Overview
 
@@ -127,10 +127,12 @@ Follow-my-footsteps/
 - ✅ **Week 5**: Player system with A* pathfinding and dual path visualization
 - ✅ **Week 5**: Turn-based simulation core with action points system
 - ✅ **Week 7**: Async pathfinding manager and smooth movement system (145 tests passing - all green! ✅)
-- ✅ **Week 8-10**: NPC foundation and state machine complete (228 tests passing ✅)
+- ✅ **Week 8-10**: NPC foundation and state machine complete (228+ tests passing ✅)
   - ✅ EntityFactory spawning system with object pooling
   - ✅ NPCSpawner scene component for test NPCs  
   - ✅ 6 NPC types ready to spawn in game world
+  - ✅ Patrol waypoint system with Inspector configuration
+  - ✅ Build compatibility via Resources folder loading
 - 📋 **Week 12**: Combat functional, basic NPC AI working
 - 📋 **Week 19**: Quests and trading systems complete
 - 📋 **Week 23**: Full NPC ecosystem with factions, weather, settlements
@@ -212,7 +214,16 @@ Follow-my-footsteps/
 - ✅ Procedural sprite generation using ColorTint from NPCDefinition
 - ✅ Automatic SimulationManager registration for turn-based updates
 - ✅ Cell occupancy management (mark/clear on spawn/despawn)
-- ✅ 83+ unit tests including EntityFactory tests (spawning, pooling, occupancy)
+- ✅ **Patrol Waypoint System (Phase 4.6)**:
+  - SerializableHexCoord for Unity Inspector waypoint configuration
+  - NPCDefinition.PatrolWaypoints list with GetPatrolWaypoints() conversion
+  - PatrolMode enum (Loop/PingPong) for patrol patterns
+  - NPCController integration passing waypoints to PatrolState
+  - Graceful fallback to Idle state when no waypoints configured
+  - Resources folder loading for build compatibility (`Resources.LoadAll()`)
+  - NPCSpawnDiagnostics tool for debugging spawn issues
+  - Build vs Editor compatibility (AssetDatabase in Editor, Resources in builds)
+- ✅ 95+ unit tests including EntityFactory tests, waypoint system tests
 
 ---
 
@@ -373,4 +384,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Last Updated: November 19, 2025 - Phase 4 Complete (NPC Foundation & State Machine - 8 States, Perception, Turn Integration)*
+*Last Updated: November 19, 2025 - Phase 4 Complete (NPC Foundation & State Machine - 8 States, Perception, Turn Integration, Patrol Waypoints, Build Compatibility)*
