@@ -101,7 +101,7 @@ Follow-my-footsteps/
 
 **Duration**: 27 weeks (~6-7 months)  
 **Target Commits**: 120-150 following conventional commit standards  
-**Current Status**: Phase 4 Complete - NPC Foundation & State Machine ✅ (207 tests passing)
+**Current Status**: Phase 4 Complete - NPC Foundation & State Machine ✅ (228 tests passing)
 
 ### Phase Overview
 
@@ -110,7 +110,7 @@ Follow-my-footsteps/
 | **1** | 1-3 | Foundation & Core Systems | ✅ Complete | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
 | **2** | 4-5 | Player & Basic Interaction | ✅ Complete | Player movement, input abstraction, camera, dual path visualization, turn system |
 | **3** | 6-7 | Pathfinding & Entity Movement | ✅ Complete | A* pathfinding, async manager, movement controller, smooth animation |
-| **4** | 8-10 | NPC Foundation & State Machine | ✅ Complete | NPC data, HFSM, perception, initial behaviors |
+| **4** | 8-10 | NPC Foundation & State Machine | ✅ Complete | NPC data, HFSM, perception, spawning, object pooling |
 | **5** | 11-12 | Combat & Interaction | 📋 Planned | Turn-based combat, attack/flee AI, interaction system |
 | **6** | 13-14 | Environmental Objects & Events | 📋 Planned | Collectibles, traps, dynamic placement, inventory |
 | **7** | 15-16 | Building & Terrain Modification | 📋 Planned | Build mode, construction progress, terrain editing |
@@ -127,7 +127,10 @@ Follow-my-footsteps/
 - ✅ **Week 5**: Player system with A* pathfinding and dual path visualization
 - ✅ **Week 5**: Turn-based simulation core with action points system
 - ✅ **Week 7**: Async pathfinding manager and smooth movement system (145 tests passing - all green! ✅)
-- ✅ **Week 8-10**: NPC foundation and state machine complete (207 tests passing ✅)
+- ✅ **Week 8-10**: NPC foundation and state machine complete (228 tests passing ✅)
+  - ✅ EntityFactory spawning system with object pooling
+  - ✅ NPCSpawner scene component for test NPCs  
+  - ✅ 6 NPC types ready to spawn in game world
 - 📋 **Week 12**: Combat functional, basic NPC AI working
 - 📋 **Week 19**: Quests and trading systems complete
 - 📋 **Week 23**: Full NPC ecosystem with factions, weather, settlements
@@ -204,9 +207,12 @@ Follow-my-footsteps/
 - ✅ 6 initial NPC type definitions (Villager, Goblin, Merchant, Bandit, Guard, Farmer)
 - ✅ EditorScript for creating NPC definition assets (NPCDefinitionCreator.cs)
 - ✅ State coverage: Idle (Merchant), Patrol (Goblin/Bandit/Guard), Wander (Villager), Work (Farmer)
-- ✅ 70+ unit tests for state machine, AI states, NPC data, perception, turns, and asset creation
-- 📋 Combat integration (Phase 5)
-- 📋 Object pooling implementation (Phase 5)
+- ✅ EntityFactory spawning system with object pooling (pool size: 20-100)
+- ✅ NPCSpawner scene component for initial test NPCs
+- ✅ Procedural sprite generation using ColorTint from NPCDefinition
+- ✅ Automatic SimulationManager registration for turn-based updates
+- ✅ Cell occupancy management (mark/clear on spawn/despawn)
+- ✅ 83+ unit tests including EntityFactory tests (spawning, pooling, occupancy)
 
 ---
 
