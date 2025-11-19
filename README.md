@@ -109,7 +109,7 @@ Follow-my-footsteps/
 |-------|-------|-------|--------|------------------|
 | **1** | 1-3 | Foundation & Core Systems | ✅ Complete | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
 | **2** | 4-5 | Player & Basic Interaction | ✅ Complete | Player movement, input abstraction, camera, dual path visualization, turn system |
-| **3** | 6-7 | Pathfinding & Entity Movement | 🚧 In Progress | A* pathfinding (✅), async manager, optimizations |
+| **3** | 6-7 | Pathfinding & Entity Movement | 🚧 In Progress | A* pathfinding (✅), async manager (✅), movement system |
 | **4** | 8-10 | NPC Foundation & State Machine | 📋 Planned | NPC data, HFSM, perception, initial behaviors |
 | **5** | 11-12 | Combat & Interaction | 📋 Planned | Turn-based combat, attack/flee AI, interaction system |
 | **6** | 13-14 | Environmental Objects & Events | 📋 Planned | Collectibles, traps, dynamic placement, inventory |
