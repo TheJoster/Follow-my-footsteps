@@ -219,7 +219,7 @@ namespace FollowMyFootsteps.Entities
         /// </summary>
         public void StopMovement()
         {
-            if (movementCoroutine != null)
+            if (movementCoroutine != null && this != null && gameObject != null)
             {
                 StopCoroutine(movementCoroutine);
                 movementCoroutine = null;
@@ -228,7 +228,11 @@ namespace FollowMyFootsteps.Entities
             isMoving = false;
             currentPath = null;
             currentPathIndex = 0;
-            cachedTerrainTypes.Clear();
+            
+            if (cachedTerrainTypes != null)
+            {
+                cachedTerrainTypes.Clear();
+            }
         }
 
         /// <summary>
@@ -252,8 +256,11 @@ namespace FollowMyFootsteps.Entities
             var cell = hexGrid.GetCell(coord);
             if (cell == null) return false;
 
-            // Check if walkable
-            if (cell.Terrain != null && !cell.Terrain.IsWalkable) return false;
+            // Check if walkable (null terrain means walkable by default)
+            if (cell.Terrain != null && !cell.Terrain.IsWalkable)
+            {
+                return false;
+            }
 
             // Check if terrain changed
             if (cancelOnTerrainChange && cachedTerrainTypes.ContainsKey(coord))

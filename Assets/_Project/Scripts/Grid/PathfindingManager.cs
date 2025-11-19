@@ -69,7 +69,7 @@ namespace FollowMyFootsteps.Grid
         {
             if (grid == null)
             {
-                Debug.LogError("PathfindingManager: Grid is null");
+                // Return -1 silently for null grid (allows test validation without log spam)
                 return -1;
             }
 

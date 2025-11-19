@@ -24,6 +24,7 @@ namespace FollowMyFootsteps.Tests.EditMode
             // Create test grid
             gridObject = new GameObject("TestGrid");
             testGrid = gridObject.AddComponent<HexGrid>();
+            testGrid.InitializeGrid(2, 2); // Manually call since Start() doesn't run in edit mode tests
 
             // Create controller
             controllerObject = new GameObject("TestController");

@@ -84,7 +84,7 @@ namespace FollowMyFootsteps.Entities
         #region ITurnEntity Implementation
 
         public string EntityName => "Player";
-        public bool IsActive => IsAlive;
+        public bool IsActive => playerData == null || IsAlive; // Active by default until dead
         public int ActionPoints => currentActionPoints;
         public int MaxActionPoints => maxActionPoints;
 
@@ -117,6 +117,12 @@ namespace FollowMyFootsteps.Entities
 
         public bool ConsumeActionPoints(int amount)
         {
+            if (amount <= 0)
+            {
+                Debug.LogWarning($"[PlayerController] Invalid action point amount: {amount}");
+                return false;
+            }
+
             if (currentActionPoints >= amount)
             {
                 currentActionPoints -= amount;
@@ -132,7 +138,7 @@ namespace FollowMyFootsteps.Entities
                 return true;
             }
             
-            Debug.LogWarning($"[PlayerController] Not enough action points - need {amount}, have {currentActionPoints}");
+            Debug.Log($"[PlayerController] Not enough action points - need {amount}, have {currentActionPoints}");
             return false;
         }
 

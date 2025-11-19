@@ -87,6 +87,12 @@ namespace FollowMyFootsteps.Core
         /// </summary>
         public void RegisterEntity(ITurnEntity entity)
         {
+            if (entity == null)
+            {
+                Debug.LogWarning("[SimulationManager] Cannot register null entity");
+                return;
+            }
+
             if (!turnEntities.Contains(entity))
             {
                 turnEntities.Add(entity);
@@ -99,6 +105,12 @@ namespace FollowMyFootsteps.Core
         /// </summary>
         public void UnregisterEntity(ITurnEntity entity)
         {
+            if (entity == null)
+            {
+                Debug.LogWarning("[SimulationManager] Cannot unregister null entity");
+                return;
+            }
+
             turnEntities.Remove(entity);
             Debug.Log($"[SimulationManager] Unregistered entity: {entity.EntityName}");
         }
