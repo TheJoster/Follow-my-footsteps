@@ -149,9 +149,11 @@ namespace FollowMyFootsteps.Entities
         /// <returns>True if path is valid and movement started.</returns>
         public bool FollowPath(List<HexCoord> path, bool startImmediately = true)
         {
+            Debug.Log($"[MovementController] FollowPath called on {gameObject.name}, path={(path != null ? path.Count.ToString() : "null")} coords, startImmediately={startImmediately}");
+            
             if (path == null || path.Count == 0)
             {
-                Debug.LogWarning("MovementController: Cannot follow null or empty path.");
+                Debug.LogWarning($"[MovementController] {gameObject.name} Cannot follow null or empty path.");
                 return false;
             }
 
@@ -161,6 +163,8 @@ namespace FollowMyFootsteps.Entities
             // Cache the path
             currentPath = new List<HexCoord>(path);
             currentPathIndex = 0;
+            
+            Debug.Log($"[MovementController] {gameObject.name} path cached: {string.Join(" -> ", path)}");
 
             // Cache terrain types if validation is enabled
             if (cancelOnTerrainChange && hexGrid != null)
@@ -170,7 +174,12 @@ namespace FollowMyFootsteps.Entities
 
             if (startImmediately)
             {
+                Debug.Log($"[MovementController] {gameObject.name} calling StartMovement()");
                 StartMovement();
+            }
+            else
+            {
+                Debug.Log($"[MovementController] {gameObject.name} path set but not starting immediately");
             }
 
             return true;
@@ -181,21 +190,37 @@ namespace FollowMyFootsteps.Entities
         /// </summary>
         public void StartMovement()
         {
+            Debug.Log($"[MovementController] StartMovement called on {gameObject.name}, gameObject.activeInHierarchy={gameObject.activeInHierarchy}, enabled={enabled}");
+            
             if (currentPath == null || currentPath.Count == 0)
             {
-                Debug.LogWarning("MovementController: No path to follow.");
+                Debug.LogWarning($"[MovementController] {gameObject.name} No path to follow. Path={currentPath != null}, Count={currentPath?.Count ?? 0}");
                 return;
             }
 
             if (isMoving)
             {
-                Debug.LogWarning("MovementController: Already moving.");
+                Debug.LogWarning($"[MovementController] {gameObject.name} Already moving.");
+                return;
+            }
+            
+            if (!gameObject.activeInHierarchy)
+            {
+                Debug.LogError($"[MovementController] {gameObject.name} Cannot start movement - GameObject is not active in hierarchy!");
+                return;
+            }
+            
+            if (!enabled)
+            {
+                Debug.LogError($"[MovementController] {gameObject.name} Cannot start movement - component is disabled!");
                 return;
             }
 
+            Debug.Log($"[MovementController] {gameObject.name} Starting movement coroutine...");
             isMoving = true;
             movementCoroutine = StartCoroutine(MovementCoroutine());
             OnMovementStart?.Invoke();
+            Debug.Log($"[MovementController] {gameObject.name} Movement coroutine started successfully, isMoving={isMoving}");
         }
 
         /// <summary>
@@ -277,9 +302,12 @@ namespace FollowMyFootsteps.Entities
 
         private IEnumerator MovementCoroutine()
         {
+            Debug.Log($"[MovementController] MovementCoroutine STARTED on {gameObject.name}, path length={currentPath.Count}");
+            
             while (currentPathIndex < currentPath.Count)
             {
                 HexCoord targetCoord = currentPath[currentPathIndex];
+                Debug.Log($"[MovementController] {gameObject.name} moving to step {currentPathIndex+1}/{currentPath.Count}: {targetCoord}");
 
                 // Validate the next step
                 if (validatePath && !IsCellValid(targetCoord))

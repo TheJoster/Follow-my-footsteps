@@ -59,13 +59,7 @@ namespace FollowMyFootsteps.Core
 
         private void Awake()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
-        }
+            Debug.Log($\"[SimulationManager] Awake called on {gameObject.name}\");\n            \n            if (Instance != null && Instance != this)\n            {\n                Debug.LogWarning($\"[SimulationManager] Duplicate instance found, destroying {gameObject.name}\");\n                Destroy(gameObject);\n                return;\n            }\n            \n            Instance = this;\n            Debug.Log($\"[SimulationManager] Instance singleton set successfully\");\n        }
 
         private void Start()
         {

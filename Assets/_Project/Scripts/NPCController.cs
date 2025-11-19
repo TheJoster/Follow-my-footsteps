@@ -75,13 +75,25 @@ namespace FollowMyFootsteps
 
         private void Awake()
         {
+            Debug.Log($"[NPCController] Awake called on {gameObject.name}");
+            
             movementController = GetComponent<MovementController>();
+            if (movementController == null)
+            {
+                Debug.LogError($"[NPCController] {gameObject.name} is missing MovementController component!");
+            }
+            else
+            {
+                Debug.Log($"[NPCController] {gameObject.name} found MovementController");
+            }
+            
             perception = GetComponent<PerceptionComponent>();
             
             // Add PerceptionComponent if not present
             if (perception == null)
             {
                 perception = gameObject.AddComponent<PerceptionComponent>();
+                Debug.Log($"[NPCController] {gameObject.name} added PerceptionComponent");
             }
             
             // Skip error for pooled NPCs without definition
@@ -90,32 +102,62 @@ namespace FollowMyFootsteps
 
         private void Start()
         {
+            Debug.Log($"[NPCController] Start called on {gameObject.name}, isActive={gameObject.activeInHierarchy}, definition={npcDefinition != null}");
+            
             // Only initialize if definition is assigned (spawned NPC, not pooled)
             if (npcDefinition != null)
             {
+                Debug.Log($"[NPCController] {EntityName} calling InitializeNPC()");
                 InitializeNPC();
+            }
+            else
+            {
+                Debug.LogWarning($"[NPCController] {gameObject.name} has no definition in Start()");
             }
             
             // Register with SimulationManager
             if (SimulationManager.Instance != null && npcDefinition != null)
             {
                 SimulationManager.Instance.RegisterEntity(this);
-                
-                if (showDebugLogs)
-                {
-                    Debug.Log($"[NPCController] {EntityName} registered with SimulationManager");
-                }
+                Debug.Log($"[NPCController] {EntityName} registered with SimulationManager");
+            }
+            else if (SimulationManager.Instance == null)
+            {
+                Debug.LogError($"[NPCController] {gameObject.name} cannot register: SimulationManager.Instance is NULL!");
             }
         }
 
+        private int updateFrameCount = 0;
+        
         private void Update()
         {
-            if (!IsAlive) return;
+            updateFrameCount++;
+            
+            // Log first 5 updates and every 60 frames to verify Update is being called
+            if (updateFrameCount <= 5 || updateFrameCount % 60 == 0)
+            {
+                Debug.Log($"[NPCController] Update #{updateFrameCount} on {EntityName}, IsAlive={IsAlive}, stateMachine={stateMachine != null}");
+            }
+            
+            if (!IsAlive)
+            {
+                if (updateFrameCount % 60 == 0)
+                {
+                    Debug.LogWarning($"[NPCController] {EntityName} Update called but NPC is not alive!");
+                }
+                return;
+            }
             
             // Update state machine continuously for real-time AI behavior
             // States handle their own timing (WanderState uses Time.deltaTime for wait timers)
             // Movement is handled by MovementController coroutines
-            stateMachine?.Update();
+            if (stateMachine == null)
+            {
+                Debug.LogError($"[NPCController] {EntityName} has null stateMachine in Update()!");
+                return;
+            }
+            
+            stateMachine.Update();
         }
 
         /// <summary>
