@@ -21,6 +21,7 @@ namespace FollowMyFootsteps
         [Header("Components")]
         private StateMachine stateMachine;
         private MovementController movementController;
+        private PerceptionComponent perception;
         
         [Header("Debug")]
         [SerializeField] private bool showDebugLogs = true;
@@ -48,6 +49,13 @@ namespace FollowMyFootsteps
         private void Awake()
         {
             movementController = GetComponent<MovementController>();
+            perception = GetComponent<PerceptionComponent>();
+            
+            // Add PerceptionComponent if not present
+            if (perception == null)
+            {
+                perception = gameObject.AddComponent<PerceptionComponent>();
+            }
             
             if (npcDefinition == null)
             {
@@ -98,6 +106,9 @@ namespace FollowMyFootsteps
             
             // Initialize state machine
             InitializeStateMachine();
+            
+            // Initialize perception
+            InitializePerception();
             
             // Set visual appearance
             ApplyVisualAppearance();
@@ -309,11 +320,35 @@ namespace FollowMyFootsteps
         }
 
         /// <summary>
+        /// Initialize perception system
+        /// </summary>
+        private void InitializePerception()
+        {
+            if (perception != null && npcDefinition != null)
+            {
+                perception.SetVisionRange(npcDefinition.VisionRange);
+                
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[NPCController] Initialized perception with vision range {npcDefinition.VisionRange}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Get movement controller
         /// </summary>
         public MovementController GetMovementController()
         {
             return movementController;
+        }
+        
+        /// <summary>
+        /// Get perception component
+        /// </summary>
+        public PerceptionComponent GetPerception()
+        {
+            return perception;
         }
 
         private void OnDestroy()
