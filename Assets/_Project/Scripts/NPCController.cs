@@ -2,15 +2,17 @@ using UnityEngine;
 using FollowMyFootsteps.AI;
 using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Entities;
+using FollowMyFootsteps.Core;
 
 namespace FollowMyFootsteps
 {
     /// <summary>
     /// Main controller for NPC behavior, integrating state machine, movement, and runtime data
     /// Phase 4.2 - NPC Controller Integration
+    /// Phase 4.4 - Turn-Based Integration
     /// </summary>
     [RequireComponent(typeof(MovementController))]
-    public class NPCController : MonoBehaviour
+    public class NPCController : MonoBehaviour, ITurnEntity
     {
         [Header("NPC Configuration")]
         [SerializeField] private NPCDefinition npcDefinition;
@@ -45,6 +47,30 @@ namespace FollowMyFootsteps
         /// Check if NPC is alive
         /// </summary>
         public bool IsAlive => runtimeData?.IsAlive ?? false;
+        
+        #region ITurnEntity Implementation
+        
+        /// <summary>
+        /// Entity name for turn system
+        /// </summary>
+        public string EntityName => npcDefinition?.NPCName ?? "Unknown NPC";
+        
+        /// <summary>
+        /// Is this NPC active and able to take turns
+        /// </summary>
+        public bool IsActive => IsAlive;
+        
+        /// <summary>
+        /// Current action points
+        /// </summary>
+        public int ActionPoints => runtimeData?.CurrentActionPoints ?? 0;
+        
+        /// <summary>
+        /// Maximum action points per turn
+        /// </summary>
+        public int MaxActionPoints => npcDefinition?.MaxActionPoints ?? 3;
+        
+        #endregion
 
         private void Awake()
         {
@@ -67,6 +93,17 @@ namespace FollowMyFootsteps
         private void Start()
         {
             InitializeNPC();
+            
+            // Register with SimulationManager
+            if (SimulationManager.Instance != null)
+            {
+                SimulationManager.Instance.RegisterEntity(this);
+                
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[NPCController] {EntityName} registered with SimulationManager");
+                }
+            }
         }
 
         private void Update()
@@ -336,26 +373,125 @@ namespace FollowMyFootsteps
         }
 
         /// <summary>
-        /// Get movement controller
+        /// Get movement controller (lazy initialization for tests)
         /// </summary>
         public MovementController GetMovementController()
         {
+            if (movementController == null)
+            {
+                movementController = GetComponent<MovementController>();
+            }
             return movementController;
         }
         
         /// <summary>
-        /// Get perception component
+        /// Get perception component (lazy initialization for tests)
         /// </summary>
         public PerceptionComponent GetPerception()
         {
+            if (perception == null)
+            {
+                perception = GetComponent<PerceptionComponent>();
+            }
             return perception;
         }
+        
+        #region ITurnEntity Methods
+        
+        /// <summary>
+        /// Called when NPC's turn starts - refresh action points
+        /// </summary>
+        public void OnTurnStart()
+        {
+            if (!IsAlive) return;
+            
+            // Refresh action points
+            runtimeData.CurrentActionPoints = npcDefinition.MaxActionPoints;
+            
+            if (showDebugLogs)
+            {
+                Debug.Log($"[NPCController] {EntityName} turn started. AP: {ActionPoints}/{MaxActionPoints}");
+            }
+        }
+        
+        /// <summary>
+        /// NPC takes its turn - execute current state logic
+        /// </summary>
+        public void TakeTurn()
+        {
+            if (!IsAlive) return;
+            
+            // Update state machine (state decides what action to take)
+            stateMachine?.Update();
+            
+            // States can use perception to detect targets
+            // States can use movementController to move
+            // States can consume action points for actions
+            
+            if (showDebugLogs)
+            {
+                Debug.Log($"[NPCController] {EntityName} taking turn in state: {CurrentState}");
+            }
+        }
+        
+        /// <summary>
+        /// Called when NPC's turn ends
+        /// </summary>
+        public void OnTurnEnd()
+        {
+            if (!IsAlive) return;
+            
+            if (showDebugLogs)
+            {
+                Debug.Log($"[NPCController] {EntityName} turn ended. AP remaining: {ActionPoints}");
+            }
+        }
+        
+        /// <summary>
+        /// Consume action points for an action
+        /// </summary>
+        public bool ConsumeActionPoints(int amount)
+        {
+            if (!IsAlive) return false;
+            
+            if (amount <= 0)
+            {
+                Debug.LogWarning($"[NPCController] {EntityName} tried to consume invalid AP amount: {amount}");
+                return false;
+            }
+            
+            if (runtimeData.CurrentActionPoints < amount)
+            {
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[NPCController] {EntityName} insufficient AP. Has {ActionPoints}, needs {amount}");
+                }
+                return false;
+            }
+            
+            runtimeData.CurrentActionPoints -= amount;
+            
+            if (showDebugLogs)
+            {
+                Debug.Log($"[NPCController] {EntityName} consumed {amount} AP. Remaining: {ActionPoints}");
+            }
+            
+            return true;
+        }
+        
+        #endregion
 
         private void OnDestroy()
         {
             if (stateMachine != null)
             {
                 stateMachine.OnStateChanged -= OnStateChanged;
+            }
+            
+            // Unregister from SimulationManager
+            if (SimulationManager.Instance != null)
+            {
+                SimulationManager.Instance.UnregisterEntity(this);
             }
         }
 

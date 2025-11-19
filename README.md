@@ -101,7 +101,7 @@ Follow-my-footsteps/
 
 **Duration**: 27 weeks (~6-7 months)  
 **Target Commits**: 120-150 following conventional commit standards  
-**Current Status**: Phase 4 In Progress (NPC Foundation & State Machine) - 145 tests passing ✅
+**Current Status**: Phase 4 Complete - NPC Foundation & State Machine ✅ (207 tests passing)
 
 ### Phase Overview
 
@@ -110,7 +110,7 @@ Follow-my-footsteps/
 | **1** | 1-3 | Foundation & Core Systems | ✅ Complete | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
 | **2** | 4-5 | Player & Basic Interaction | ✅ Complete | Player movement, input abstraction, camera, dual path visualization, turn system |
 | **3** | 6-7 | Pathfinding & Entity Movement | ✅ Complete | A* pathfinding, async manager, movement controller, smooth animation |
-| **4** | 8-10 | NPC Foundation & State Machine | 🚧 In Progress | NPC data, HFSM, perception, initial behaviors |
+| **4** | 8-10 | NPC Foundation & State Machine | ✅ Complete | NPC data, HFSM, perception, initial behaviors |
 | **5** | 11-12 | Combat & Interaction | 📋 Planned | Turn-based combat, attack/flee AI, interaction system |
 | **6** | 13-14 | Environmental Objects & Events | 📋 Planned | Collectibles, traps, dynamic placement, inventory |
 | **7** | 15-16 | Building & Terrain Modification | 📋 Planned | Build mode, construction progress, terrain editing |
@@ -127,7 +127,7 @@ Follow-my-footsteps/
 - ✅ **Week 5**: Player system with A* pathfinding and dual path visualization
 - ✅ **Week 5**: Turn-based simulation core with action points system
 - ✅ **Week 7**: Async pathfinding manager and smooth movement system (145 tests passing - all green! ✅)
-- 🚧 **Week 8-10**: NPC foundation and state machine (in progress)
+- ✅ **Week 8-10**: NPC foundation and state machine complete (207 tests passing ✅)
 - 📋 **Week 12**: Combat functional, basic NPC AI working
 - 📋 **Week 19**: Quests and trading systems complete
 - 📋 **Week 23**: Full NPC ecosystem with factions, weather, settlements
@@ -183,7 +183,7 @@ Follow-my-footsteps/
 - ✅ 2D sprite support (Z-position preservation, no rotation)
 - ✅ 33 unit tests for pathfinding and movement systems
 
-**NPC Foundation & State Machine (Phase 4 - In Progress):**
+**NPC Foundation & State Machine (Phase 4 - Complete ✅):**
 - ✅ NPCDefinition ScriptableObject (name, sprite, stats, type, vision, initial state)
 - ✅ NPCRuntimeData serializable class (health, position, state, inventory, factions)
 - ✅ LootTable ScriptableObject placeholder (Phase 6 implementation)
@@ -196,10 +196,17 @@ Follow-my-footsteps/
 - ✅ NPCController MonoBehaviour integrating state machine, movement, and health
 - ✅ Auto-state configuration based on NPCType (Friendly/Neutral/Hostile)
 - ✅ Health management with automatic flee behavior at low health
-- ✅ 50+ unit tests for state machine, AI states, and NPC data
-- 📋 Perception system (Phase 4.3)
-- 📋 NPC turn execution integration (Phase 4.4)
-- 📋 Initial NPC type definitions (Phase 4.5)
+- ✅ PerceptionComponent with vision range, target detection, and memory system
+- ✅ ITurnEntity integration - NPCs participate in turn-based simulation
+- ✅ Turn execution: OnTurnStart (refresh AP), TakeTurn (AI logic), OnTurnEnd
+- ✅ Action point system with consumption validation
+- ✅ SimulationManager registration for automatic turn processing
+- ✅ 6 initial NPC type definitions (Villager, Goblin, Merchant, Bandit, Guard, Farmer)
+- ✅ EditorScript for creating NPC definition assets (NPCDefinitionCreator.cs)
+- ✅ State coverage: Idle (Merchant), Patrol (Goblin/Bandit/Guard), Wander (Villager), Work (Farmer)
+- ✅ 70+ unit tests for state machine, AI states, NPC data, perception, turns, and asset creation
+- 📋 Combat integration (Phase 5)
+- 📋 Object pooling implementation (Phase 5)
 
 ---
 
@@ -360,4 +367,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Last Updated: November 19, 2025 - Phase 4.2 In Progress (NPC Foundation & State Machine - 8 States Implemented)*
+*Last Updated: November 19, 2025 - Phase 4 Complete (NPC Foundation & State Machine - 8 States, Perception, Turn Integration)*
