@@ -206,6 +206,12 @@ namespace FollowMyFootsteps
             PatrolState.PatrolMode mode = npcDefinition != null ? npcDefinition.PatrolMode : PatrolState.PatrolMode.Loop;
             stateMachine.AddState(new PatrolState(waypoints, mode));
             
+            Debug.Log($"[NPCController] {EntityName} configured with {waypoints.Count} patrol waypoints in {mode} mode");
+            if (waypoints.Count > 0)
+            {
+                Debug.Log($"[NPCController] {EntityName} waypoints: {string.Join(", ", waypoints)}");
+            }
+            
             stateMachine.AddState(new DialogueState(maxDistance: 2f));
             stateMachine.AddState(new WorkState(runtimeData.Position, WorkState.WorkType.Farming, duration: 3f));
             
@@ -241,6 +247,12 @@ namespace FollowMyFootsteps
             List<HexCoord> waypoints = npcDefinition != null ? npcDefinition.GetPatrolWaypoints() : new List<HexCoord>();
             PatrolState.PatrolMode mode = npcDefinition != null ? npcDefinition.PatrolMode : PatrolState.PatrolMode.Loop;
             stateMachine.AddState(new PatrolState(waypoints, mode));
+            
+            Debug.Log($"[NPCController] {EntityName} configured with {waypoints.Count} patrol waypoints in {mode} mode");
+            if (waypoints.Count > 0)
+            {
+                Debug.Log($"[NPCController] {EntityName} waypoints: {string.Join(", ", waypoints)}");
+            }
             
             stateMachine.AddState(new ChaseState(attackRange: 1f, loseTargetDistance: 10f));
             stateMachine.AddState(new FleeState(minSafeDistance: 8f, healthPercent: 0.3f));
