@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using FollowMyFootsteps.Grid;
+using FollowMyFootsteps.Entities;
 
 namespace FollowMyFootsteps.AI
 {
@@ -16,6 +17,8 @@ namespace FollowMyFootsteps.AI
         private int currentWaypointIndex;
         private bool reverseDirection;
         private PatrolMode mode;
+        private bool isMovingToWaypoint;
+        private bool hasRequestedPath;
         
         public enum PatrolMode
         {
@@ -58,18 +61,64 @@ namespace FollowMyFootsteps.AI
         {
             if (waypoints.Count == 0) return;
             
-            // TODO: Integrate with MovementController
-            // 1. Check if NPC reached current waypoint
-            // 2. If yes, advance to next waypoint
-            // 3. Request pathfinding to next waypoint
-            // 4. If enemy detected via perception, transition to ChaseState
+            NPCController npc = entity as NPCController;
+            if (npc == null) return;
             
-            // For now, just log the current target waypoint
+            var movement = npc.GetMovementController();
+            if (movement == null) return;
+            
+            HexCoord currentPos = npc.RuntimeData.Position;
             HexCoord targetWaypoint = waypoints[currentWaypointIndex];
             
-            // Placeholder: Simulate waypoint reached
-            // In real implementation, NPCController will check position vs waypoint
-            // AdvanceToNextWaypoint();
+            // Check if we reached the current waypoint
+            if (currentPos == targetWaypoint)
+            {
+                // Reached waypoint - advance to next
+                AdvanceToNextWaypoint();
+                targetWaypoint = waypoints[currentWaypointIndex];
+                isMovingToWaypoint = false;
+                hasRequestedPath = false;
+            }
+            
+            // If not moving and not already at waypoint, request path
+            if (!isMovingToWaypoint && !hasRequestedPath)
+            {
+                // Check if we have enough AP to move
+                if (npc.ActionPoints > 0)
+                {
+                    var pathfinding = PathfindingManager.Instance;
+                    if (pathfinding != null)
+                    {
+                        hasRequestedPath = true;
+                        pathfinding.RequestPath(HexGrid.Instance, currentPos, targetWaypoint, 
+                            (path) => OnPathReceived(path, npc, movement));
+                    }
+                }
+            }
+            
+            // Check for enemies via perception (future: transition to Chase)
+            // var perception = npc.GetComponent<PerceptionComponent>();
+            // if (perception != null && perception.HasTarget())
+            // {
+            //     npc.ChangeState("Chase");
+            // }
+        }
+        
+        private void OnPathReceived(List<HexCoord> path, NPCController npc, Entities.MovementController movement)
+        {
+            hasRequestedPath = false;
+            
+            if (path != null && path.Count > 0)
+            {
+                isMovingToWaypoint = true;
+                movement.FollowPath(path);
+            }
+            else
+            {
+                // No path found - advance to next waypoint or idle
+                Debug.LogWarning($"[PatrolState] {npc.EntityName} cannot find path to waypoint {waypoints[currentWaypointIndex]}");
+                AdvanceToNextWaypoint();
+            }
         }
         
         public void OnExit(object entity)

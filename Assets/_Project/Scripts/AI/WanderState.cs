@@ -1,5 +1,7 @@
 using UnityEngine;
 using FollowMyFootsteps.Grid;
+using FollowMyFootsteps.Entities;
+using System.Collections.Generic;
 
 namespace FollowMyFootsteps.AI
 {
@@ -20,6 +22,8 @@ namespace FollowMyFootsteps.AI
         private float waitDuration;
         private bool isWaiting;
         private HexCoord targetPosition;
+        private bool hasRequestedPath;
+        private bool isMovingToTarget;
         
         /// <summary>
         /// Constructor
@@ -40,11 +44,15 @@ namespace FollowMyFootsteps.AI
         public void OnEnter(object entity)
         {
             Debug.Log($"[WanderState] Entered. Wandering within {wanderRadius} cells of {homePosition}");
-            PickNewWanderTarget();
+            NPCController npc = entity as NPCController;
+            PickNewWanderTarget(npc);
         }
         
         public void OnUpdate(object entity)
         {
+            NPCController npc = entity as NPCController;
+            if (npc == null) return;
+            
             if (isWaiting)
             {
                 waitTimer += Time.deltaTime;
@@ -53,22 +61,51 @@ namespace FollowMyFootsteps.AI
                 {
                     // Wait complete, pick new target
                     isWaiting = false;
-                    PickNewWanderTarget();
+                    PickNewWanderTarget(npc);
                 }
             }
             else
             {
-                // TODO: Integrate with MovementController
-                // 1. Check if NPC reached targetPosition
-                // 2. If yes, start waiting
-                // 3. If not, continue moving toward target
-                // 4. If blocked, pick new target
+                var movement = npc.GetMovementController();
+                if (movement == null) return;
                 
-                // Placeholder: Simulate arrival
-                // if (HasReachedTarget(entity, targetPosition))
-                // {
-                //     StartWaiting();
-                // }
+                HexCoord currentPos = npc.RuntimeData.Position;
+                
+                // Check if reached target
+                if (currentPos == targetPosition)
+                {
+                    StartWaiting();
+                    isMovingToTarget = false;
+                    hasRequestedPath = false;
+                }
+                // Request path if not already moving
+                else if (!isMovingToTarget && !hasRequestedPath && npc.ActionPoints > 0)
+                {
+                    var pathfinding = PathfindingManager.Instance;
+                    if (pathfinding != null)
+                    {
+                        hasRequestedPath = true;
+                        pathfinding.RequestPath(HexGrid.Instance, currentPos, targetPosition,
+                            (path) => OnPathReceived(path, npc, movement));
+                    }
+                }
+            }
+        }
+        
+        private void OnPathReceived(List<HexCoord> path, NPCController npc, MovementController movement)
+        {
+            hasRequestedPath = false;
+            
+            if (path != null && path.Count > 0)
+            {
+                isMovingToTarget = true;
+                movement.FollowPath(path);
+            }
+            else
+            {
+                // No path found - pick new target
+                Debug.LogWarning($"[WanderState] {npc.EntityName} cannot find path to {targetPosition}");
+                PickNewWanderTarget(npc);
             }
         }
         
@@ -82,7 +119,7 @@ namespace FollowMyFootsteps.AI
         /// <summary>
         /// Pick a random position within wander radius
         /// </summary>
-        private void PickNewWanderTarget()
+        private void PickNewWanderTarget(NPCController npc = null)
         {
             // Generate random offset within radius
             int offsetQ = Random.Range(-wanderRadius, wanderRadius + 1);
@@ -92,7 +129,7 @@ namespace FollowMyFootsteps.AI
             if (Mathf.Abs(offsetQ) + Mathf.Abs(offsetR) > wanderRadius)
             {
                 // Retry if outside radius
-                PickNewWanderTarget();
+                PickNewWanderTarget(npc);
                 return;
             }
             
@@ -101,10 +138,10 @@ namespace FollowMyFootsteps.AI
                 homePosition.r + offsetR
             );
             
-            Debug.Log($"[WanderState] New wander target: {targetPosition}");
+            hasRequestedPath = false;
+            isMovingToTarget = false;
             
-            // TODO: Request pathfinding to targetPosition
-            // PathfindingManager.FindPath(currentPosition, targetPosition);
+            Debug.Log($"[WanderState] New wander target: {targetPosition}");
         }
         
         /// <summary>
