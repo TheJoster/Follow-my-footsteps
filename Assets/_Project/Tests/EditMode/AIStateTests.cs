@@ -82,7 +82,7 @@ namespace FollowMyFootsteps.Tests
         public void OnEnter_WithoutWaypoints_LogsWarning()
         {
             var emptyPatrol = new PatrolState(null);
-            LogAssert.Expect(LogType.Warning, "[PatrolState] No waypoints defined. Cannot patrol.");
+            LogAssert.Expect(LogType.Warning, "[PatrolState] No waypoints defined. Falling back to Idle state.");
             emptyPatrol.OnEnter(testEntity);
         }
 
