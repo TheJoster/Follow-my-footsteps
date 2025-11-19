@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using FollowMyFootsteps.Entities;
 using FollowMyFootsteps.Grid;
 
@@ -23,7 +24,7 @@ namespace FollowMyFootsteps.Tests
             // Create HexGrid
             gridObject = new GameObject("TestGrid");
             hexGrid = gridObject.AddComponent<HexGrid>();
-            hexGrid.InitializeGrid();
+            hexGrid.InitializeGrid(2, 2); // 2x2 chunks for testing
 
             // Create EntityFactory
             factoryObject = new GameObject("EntityFactory");
@@ -66,6 +67,8 @@ namespace FollowMyFootsteps.Tests
         [Test]
         public void SpawnNPC_WithNullDefinition_ReturnsNull()
         {
+            LogAssert.Expect(LogType.Error, "[EntityFactory] Cannot spawn NPC: definition is null!");
+            
             NPCController npc = entityFactory.SpawnNPC(null, new HexCoord(0, 0));
 
             Assert.IsNull(npc, "Spawning with null definition should return null");
@@ -76,6 +79,8 @@ namespace FollowMyFootsteps.Tests
         {
             // Try to spawn on cell that doesn't exist
             HexCoord invalidPosition = new HexCoord(1000, 1000);
+
+            LogAssert.Expect(LogType.Warning, $"[EntityFactory] Cannot spawn NPC at {invalidPosition}: cell not found!");
 
             NPCController npc = entityFactory.SpawnNPC(testDefinition, invalidPosition);
 

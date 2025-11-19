@@ -152,6 +152,10 @@ MonoBehaviour:
   onTurnEnd: {fileID: 0}
   onStateChanged: {fileID: 0}
   npcTurnDelay: 0.5
+  showDebugPanel: 1
+  panelPosition: 0
+  panelOffset: {x: 10, y: 10}
+  panelSize: {x: 220, y: 130}
 --- !u!4 &203714862
 Transform:
   m_ObjectHideFlags: 0
@@ -386,6 +390,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1060154635
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1060154637}
+  - component: {fileID: 1060154636}
+  m_Layer: 0
+  m_Name: NPCSpawnDiagnostics
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1060154636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1060154635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c265b212b85b1894eb864a980167f89f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps::FollowMyFootsteps.Diagnostics.NPCSpawnDiagnostics
+  runDiagnosticsOnStart: 1
+  showGizmos: 1
+--- !u!4 &1060154637
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1060154635}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 23.37629, y: 7.8398, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1885503891
 GameObject:
   m_ObjectHideFlags: 0
@@ -448,6 +498,9 @@ MonoBehaviour:
   enablePattern1_TerrainGrid: 1
   enablePattern2_PathfindingCourse: 1
   enablePattern3_CombatArena: 1
+  infoPanelPosition: 1
+  infoPanelOffset: {x: 10, y: 10}
+  infoPanelSize: {x: 250, y: 180}
 --- !u!114 &1885503894
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -597,6 +650,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 559298755}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &2080132666
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2080132667}
+  - component: {fileID: 2080132668}
+  m_Layer: 0
+  m_Name: NPCSpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2080132667
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2080132666}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 23.37629, y: 7.8398, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2080132668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2080132666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffb1b7f11839a4a40a2b1eb1ada9599f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps::FollowMyFootsteps.Entities.NPCSpawner
+  autoSpawn: 1
+  npcSpawns: []
+  entityFactory: {fileID: 0}
+  hexGrid: {fileID: 1885503895}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -606,3 +707,5 @@ SceneRoots:
   - {fileID: 815142311}
   - {fileID: 996890140}
   - {fileID: 203714862}
+  - {fileID: 2080132667}
+  - {fileID: 1060154637}

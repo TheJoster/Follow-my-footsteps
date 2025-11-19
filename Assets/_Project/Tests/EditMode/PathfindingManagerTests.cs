@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using FollowMyFootsteps.Grid;
 using UnityEngine;
+using UnityEngine.TestTools;
 using System.Collections.Generic;
 
 namespace FollowMyFootsteps.Tests.EditMode
@@ -161,6 +162,9 @@ namespace FollowMyFootsteps.Tests.EditMode
             // Arrange
             var start = new HexCoord(0, 0);
             var goal = new HexCoord(10, 10); // Long path
+            
+            LogAssert.Expect(LogType.Warning, "[Pathfinding] Start or goal cell doesn't exist");
+            
             int requestId = manager.RequestPath(testGrid, start, goal, null);
 
             // Act - Try to cancel immediately

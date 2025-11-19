@@ -124,7 +124,7 @@ namespace FollowMyFootsteps.Entities
                 return null;
             }
 
-            if (cell.MovementCost >= 999)
+            if (cell.GetMovementCost() >= 999)
             {
                 Debug.LogWarning($"[EntityFactory] Cannot spawn NPC at {position}: cell not walkable!");
                 return null;
@@ -330,6 +330,12 @@ namespace FollowMyFootsteps.Entities
         public void SetHexGrid(HexGrid grid)
         {
             hexGrid = grid;
+            
+            // Initialize pool if not already done (for testing scenarios)
+            if (npcPool.Count == 0 && activeNPCs.Count == 0)
+            {
+                InitializePool();
+            }
         }
 
         /// <summary>

@@ -83,7 +83,7 @@ namespace FollowMyFootsteps.Entities
                 entityFactory.SetHexGrid(hexGrid);
             }
 
-            // Auto-load NPC definitions if list is empty
+            // Auto-load NPC definitions if list is empty (Editor only)
             if (npcSpawns.Count == 0)
             {
                 LoadDefaultNPCSpawns();
@@ -92,7 +92,14 @@ namespace FollowMyFootsteps.Entities
 
         private void Start()
         {
-            Debug.Log($"[NPCSpawner] Start called, autoSpawn = {autoSpawn}");
+            Debug.Log($"[NPCSpawner] Start called, autoSpawn = {autoSpawn}, npcSpawns.Count = {npcSpawns.Count}");
+            
+            // Warn if no NPCs configured
+            if (npcSpawns.Count == 0)
+            {
+                Debug.LogWarning("[NPCSpawner] No NPC spawns configured! Please assign NPC definitions in the Inspector.");
+            }
+            
             if (autoSpawn)
             {
                 SpawnAllNPCs();
@@ -100,12 +107,13 @@ namespace FollowMyFootsteps.Entities
         }
 
         /// <summary>
-        /// Load default NPC spawn configurations from assets
+        /// Load default NPC spawn configurations from assets (Editor only)
+        /// In builds, you must manually assign NPCs in the Inspector
         /// </summary>
         private void LoadDefaultNPCSpawns()
         {
 #if UNITY_EDITOR
-            Debug.Log("[NPCSpawner] Loading default NPC definitions...");
+            Debug.Log("[NPCSpawner] Loading default NPC definitions (Editor mode)...");
             
             string[] guids = UnityEditor.AssetDatabase.FindAssets("t:NPCDefinition");
             Debug.Log($"[NPCSpawner] Found {guids.Length} NPCDefinition assets");
@@ -136,12 +144,55 @@ namespace FollowMyFootsteps.Entities
             if (npcSpawns.Count > 0)
             {
                 Debug.Log($"[NPCSpawner] Loaded {npcSpawns.Count} NPC spawn configurations");
+                
+                // Mark the object dirty so Unity saves the changes
+                UnityEditor.EditorUtility.SetDirty(this);
             }
             else
             {
                 Debug.LogWarning("[NPCSpawner] No NPC definitions found in project!");
             }
+#else
+            // In builds, try to load from Resources folder as fallback
+            Debug.Log("[NPCSpawner] Build mode - attempting to load NPCs from Resources...");
+            LoadNPCsFromResources();
 #endif
+        }
+
+        /// <summary>
+        /// Load NPCs from Resources folder (works in builds)
+        /// Place NPCDefinition assets in Assets/_Project/Resources/NPCDefinitions/
+        /// </summary>
+        private void LoadNPCsFromResources()
+        {
+            NPCDefinition[] definitions = Resources.LoadAll<NPCDefinition>("NPCDefinitions");
+            Debug.Log($"[NPCSpawner] Loaded {definitions.Length} NPCs from Resources");
+
+            int spawnIndex = 0;
+            foreach (NPCDefinition definition in definitions)
+            {
+                if (definition != null)
+                {
+                    NPCSpawnConfig config = new NPCSpawnConfig
+                    {
+                        definition = definition,
+                        position = new HexCoord(5 + spawnIndex * 3, 5),
+                        enabled = true
+                    };
+                    
+                    npcSpawns.Add(config);
+                    spawnIndex++;
+                    
+                    Debug.Log($"[NPCSpawner] Added {definition.NPCName} from Resources");
+                }
+            }
+
+            if (npcSpawns.Count == 0)
+            {
+                Debug.LogWarning("[NPCSpawner] No NPCs found in Resources/NPCDefinitions! Builds require either:\n" +
+                    "1. Manually assigned NPCs in Inspector (saved in scene), OR\n" +
+                    "2. NPCDefinition assets in Resources/NPCDefinitions folder");
+            }
         }
 
         /// <summary>

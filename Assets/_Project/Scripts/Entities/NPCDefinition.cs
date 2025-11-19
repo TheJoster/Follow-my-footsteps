@@ -1,4 +1,7 @@
 using UnityEngine;
+using System.Collections.Generic;
+using FollowMyFootsteps.Grid;
+using FollowMyFootsteps.AI;
 
 namespace FollowMyFootsteps.Entities
 {
@@ -47,6 +50,13 @@ namespace FollowMyFootsteps.Entities
         [Tooltip("Initial state when spawned")]
         public string InitialState = "Idle";
 
+        [Header("Patrol Configuration")]
+        [Tooltip("Waypoints for patrol behavior (used when InitialState is Patrol)")]
+        public List<SerializableHexCoord> PatrolWaypoints = new List<SerializableHexCoord>();
+        
+        [Tooltip("Patrol mode: Loop (circular) or PingPong (back and forth)")]
+        public PatrolState.PatrolMode PatrolMode = PatrolState.PatrolMode.Loop;
+
         [Header("Loot & Resources")]
         [Tooltip("Loot table for drops on death (optional)")]
         public LootTable LootTable;
@@ -61,6 +71,35 @@ namespace FollowMyFootsteps.Entities
             if (MovementSpeed < 0.5f) MovementSpeed = 0.5f;
             if (MovementRange < 1) MovementRange = 1;
             if (VisionRange < 1) VisionRange = 1;
+        }
+        
+        /// <summary>
+        /// Get patrol waypoints as HexCoord list
+        /// </summary>
+        public List<HexCoord> GetPatrolWaypoints()
+        {
+            List<HexCoord> waypoints = new List<HexCoord>();
+            foreach (var serialized in PatrolWaypoints)
+            {
+                waypoints.Add(new HexCoord(serialized.q, serialized.r));
+            }
+            return waypoints;
+        }
+    }
+    
+    /// <summary>
+    /// Serializable version of HexCoord for Unity Inspector
+    /// </summary>
+    [System.Serializable]
+    public class SerializableHexCoord
+    {
+        public int q;
+        public int r;
+        
+        public SerializableHexCoord(int q, int r)
+        {
+            this.q = q;
+            this.r = r;
         }
     }
 

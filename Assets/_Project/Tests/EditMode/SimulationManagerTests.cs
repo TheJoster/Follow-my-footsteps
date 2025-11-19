@@ -135,6 +135,8 @@ namespace FollowMyFootsteps.Tests.EditMode
         {
             // Arrange
             int initialCount = manager.RegisteredEntityCount;
+            
+            LogAssert.Expect(LogType.Warning, "[SimulationManager] Cannot register null entity");
 
             // Act
             manager.RegisterEntity(null);
@@ -149,6 +151,8 @@ namespace FollowMyFootsteps.Tests.EditMode
         {
             // Arrange
             int initialCount = manager.RegisteredEntityCount;
+            
+            LogAssert.Expect(LogType.Warning, "[SimulationManager] Cannot unregister null entity");
 
             // Act
             manager.UnregisterEntity(null);

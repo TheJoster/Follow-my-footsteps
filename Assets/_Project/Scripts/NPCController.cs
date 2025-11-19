@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using FollowMyFootsteps.AI;
 using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Entities;
@@ -83,19 +84,20 @@ namespace FollowMyFootsteps
                 perception = gameObject.AddComponent<PerceptionComponent>();
             }
             
-            if (npcDefinition == null)
-            {
-                Debug.LogError("[NPCController] No NPCDefinition assigned!", this);
-                return;
-            }
+            // Skip error for pooled NPCs without definition
+            // Definition is assigned later via Initialize() method when spawned
         }
 
         private void Start()
         {
-            InitializeNPC();
+            // Only initialize if definition is assigned (spawned NPC, not pooled)
+            if (npcDefinition != null)
+            {
+                InitializeNPC();
+            }
             
             // Register with SimulationManager
-            if (SimulationManager.Instance != null)
+            if (SimulationManager.Instance != null && npcDefinition != null)
             {
                 SimulationManager.Instance.RegisterEntity(this);
                 
@@ -196,12 +198,18 @@ namespace FollowMyFootsteps
         {
             stateMachine.AddState(new IdleState(2f, 5f));
             stateMachine.AddState(new WanderState(runtimeData.Position, radius: 5));
+            
+            // Get patrol waypoints from NPC definition
+            List<HexCoord> waypoints = npcDefinition != null ? npcDefinition.GetPatrolWaypoints() : new List<HexCoord>();
+            PatrolState.PatrolMode mode = npcDefinition != null ? npcDefinition.PatrolMode : PatrolState.PatrolMode.Loop;
+            stateMachine.AddState(new PatrolState(waypoints, mode));
+            
             stateMachine.AddState(new DialogueState(maxDistance: 2f));
             stateMachine.AddState(new WorkState(runtimeData.Position, WorkState.WorkType.Farming, duration: 3f));
             
             if (showDebugLogs)
             {
-                Debug.Log("[NPCController] Added Friendly states: Idle, Wander, Dialogue, Work");
+                Debug.Log("[NPCController] Added Friendly states: Idle, Wander, Patrol, Dialogue, Work");
             }
         }
 
@@ -226,7 +234,12 @@ namespace FollowMyFootsteps
         private void AddHostileStates()
         {
             stateMachine.AddState(new IdleState(1f, 3f));
-            stateMachine.AddState(new PatrolState(null, PatrolState.PatrolMode.Loop));
+            
+            // Get patrol waypoints from NPC definition
+            List<HexCoord> waypoints = npcDefinition != null ? npcDefinition.GetPatrolWaypoints() : new List<HexCoord>();
+            PatrolState.PatrolMode mode = npcDefinition != null ? npcDefinition.PatrolMode : PatrolState.PatrolMode.Loop;
+            stateMachine.AddState(new PatrolState(waypoints, mode));
+            
             stateMachine.AddState(new ChaseState(attackRange: 1f, loseTargetDistance: 10f));
             stateMachine.AddState(new FleeState(minSafeDistance: 8f, healthPercent: 0.3f));
             

@@ -40,7 +40,14 @@ namespace FollowMyFootsteps.AI
         {
             if (waypoints.Count == 0)
             {
-                Debug.LogWarning("[PatrolState] No waypoints defined. Cannot patrol.");
+                Debug.LogWarning("[PatrolState] No waypoints defined. Falling back to Idle state.");
+                
+                // Try to switch to Idle state if no waypoints
+                NPCController npc = entity as NPCController;
+                if (npc != null)
+                {
+                    npc.ChangeState("Idle");
+                }
                 return;
             }
             

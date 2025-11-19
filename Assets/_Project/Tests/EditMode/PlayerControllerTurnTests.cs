@@ -2,6 +2,7 @@ using NUnit.Framework;
 using FollowMyFootsteps.Entities;
 using FollowMyFootsteps.Core;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace FollowMyFootsteps.Tests.EditMode
 {
@@ -111,6 +112,8 @@ namespace FollowMyFootsteps.Tests.EditMode
             var playerObject = new GameObject("Player");
             var player = playerObject.AddComponent<PlayerController>();
             ITurnEntity turnEntity = player as ITurnEntity;
+            
+            LogAssert.Expect(LogType.Warning, "[PlayerController] Invalid action point amount: -1");
 
             // Act
             bool consumed = turnEntity.ConsumeActionPoints(-1);
@@ -130,6 +133,8 @@ namespace FollowMyFootsteps.Tests.EditMode
             var playerObject = new GameObject("Player");
             var player = playerObject.AddComponent<PlayerController>();
             ITurnEntity turnEntity = player as ITurnEntity;
+            
+            LogAssert.Expect(LogType.Warning, "[PlayerController] Invalid action point amount: 0");
 
             // Act
             bool consumed = turnEntity.ConsumeActionPoints(0);

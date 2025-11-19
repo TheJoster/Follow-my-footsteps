@@ -410,12 +410,31 @@ Build NPC data architecture, hierarchical state machine, perception system, and 
   - Verify turn order consistency
   - Validate object pooling
 
+**4.6 Patrol Waypoint System**
+- Add waypoint configuration to NPCDefinition:
+  - `List<SerializableHexCoord> PatrolWaypoints` for Inspector
+  - `PatrolMode` enum (Loop/PingPong)
+  - `GetPatrolWaypoints()` method for conversion
+- Integrate waypoints into NPCController:
+  - Pass waypoints from definition to PatrolState
+  - Apply to both Friendly and Hostile NPC states
+- Improve PatrolState graceful fallback:
+  - If no waypoints configured, automatically transition to Idle
+  - Single warning message instead of error spam
+- Resources folder for build compatibility:
+  - Copy NPCDefinitions to `Assets/_Project/Resources/NPCDefinitions/`
+  - Use `Resources.LoadAll()` for build-time loading
+  - Maintain AssetDatabase loading for Editor
+
 ### Deliverables
 - ✅ NPC spawning with object pooling
 - ✅ Working state machine with 3 initial states
 - ✅ Perception system detecting player
 - ✅ NPCs taking turns in simulation
-- ✅ 3-5 NPC types with distinct behaviors
+- ✅ 6 NPC types with distinct behaviors and colors
+- ✅ Patrol waypoint system with Inspector configuration
+- ✅ Build/Editor compatibility via Resources folder
+- ✅ Graceful state fallbacks for unconfigured NPCs
 - ✅ Foundation for expanding AI complexity
 
 ### Estimated Commits
