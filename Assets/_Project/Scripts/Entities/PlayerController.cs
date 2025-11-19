@@ -55,10 +55,8 @@ namespace FollowMyFootsteps.Entities
 
         private PlayerData playerData;
         private SpriteRenderer spriteRenderer;
-        private bool isMoving;
-        private Vector3 moveTargetPosition;
+        private MovementController movementController;
         private List<HexCoord> currentPath;
-        private int currentPathIndex;
         private PathVisualizer committedPathVisualizer; // Shows the actual destination path
         private PathVisualizer previewPathVisualizer;   // Shows hover preview
 #if !(UNITY_EDITOR || UNITY_STANDALONE)
@@ -79,7 +77,7 @@ namespace FollowMyFootsteps.Entities
         public PlayerData Data => playerData;
         public HexCoord CurrentPosition => playerData?.Position ?? startPosition;
         public bool IsAlive => playerData != null && playerData.CurrentHealth > 0;
-        public bool IsMoving => isMoving;
+        public bool IsMoving => movementController != null && movementController.IsMoving;
 
         #endregion
 
@@ -104,10 +102,10 @@ namespace FollowMyFootsteps.Entities
             Debug.Log($"[PlayerController] Turn started - Action points refreshed to {currentActionPoints}");
             
             // Resume movement if we have a path waiting
-            if (currentPath != null && currentPathIndex < currentPath.Count && !isMoving)
+            if (currentPath != null && movementController != null && !IsMoving)
             {
-                Debug.Log($"[PlayerController] Resuming movement to destination ({currentPath.Count - currentPathIndex} cells remaining)");
-                MoveToNextPathStep();
+                Debug.Log($"[PlayerController] Resuming movement to destination");
+                movementController.StartMovement();
             }
         }
 
@@ -146,6 +144,12 @@ namespace FollowMyFootsteps.Entities
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
 
+            // Create MovementController
+            movementController = gameObject.AddComponent<MovementController>();
+            movementController.OnMovementStepStart += OnMovementStepStart;
+            movementController.OnMovementStep += OnMovementStep;
+            movementController.OnMovementComplete += OnMovementComplete;
+
             // Create committed path visualizer (solid, for destination)
             GameObject committedPathObj = new GameObject("CommittedPathVisualizer");
             committedPathObj.transform.SetParent(transform);
@@ -176,6 +180,17 @@ namespace FollowMyFootsteps.Entities
             Initialize();
             SubscribeToInput();
             
+            // Initialize MovementController with grid
+            if (movementController != null && hexGrid != null)
+            {
+                movementController.Initialize(hexGrid);
+                // Match player definition movement speed
+                if (playerDefinition != null)
+                {
+                    movementController.MoveSpeed = playerDefinition.MovementSpeed;
+                }
+            }
+            
             // Register with SimulationManager
             if (SimulationManager.Instance != null)
             {
@@ -202,13 +217,12 @@ namespace FollowMyFootsteps.Entities
 
         private void Update()
         {
-            if (isMoving)
+            if (IsMoving)
             {
-                UpdateMovement();
                 UpdateCommittedPathVisualization();
             }
             
-            // Always show path preview (allows course changes during movement)
+            // Always show path preview (allows planning next move during movement)
             UpdatePathPreview();
         }
 
@@ -256,8 +270,9 @@ namespace FollowMyFootsteps.Entities
                 spriteRenderer.sortingOrder = 0;
             }
 
-            // Position player on grid
-            SetPosition(startPosition, instant: true);
+            // Position player on grid (keep Z=0 for 2D sprite)
+            Vector3 worldPos = HexMetrics.GetWorldPosition(startPosition);
+            transform.position = new Vector3(worldPos.x, worldPos.y, 0f);
 
             Debug.Log($"[PlayerController] Initialized player '{playerDefinition.PlayerName}' at {startPosition}");
         }
@@ -291,8 +306,9 @@ namespace FollowMyFootsteps.Entities
                 spriteRenderer.sortingOrder = 0;
             }
 
-            // Position player on grid
-            SetPosition(playerData.Position, instant: true);
+            // Position player (keep Z=0 for 2D sprite)
+            Vector3 worldPos = HexMetrics.GetWorldPosition(playerData.Position);
+            transform.position = new Vector3(worldPos.x, worldPos.y, 0f);
 
             Debug.Log($"[PlayerController] Loaded player at {playerData.Position} with {playerData.CurrentHealth} HP");
         }
@@ -385,7 +401,8 @@ namespace FollowMyFootsteps.Entities
         /// </summary>
         private void UpdateCommittedPathVisualization()
         {
-            if (committedPathVisualizer == null || currentPath == null || currentPathIndex >= currentPath.Count)
+            if (committedPathVisualizer == null || currentPath == null || 
+                movementController == null)
             {
                 if (committedPathVisualizer != null)
                 {
@@ -394,11 +411,14 @@ namespace FollowMyFootsteps.Entities
                 return;
             }
 
-            // Get remaining path (from current index to end)
-            List<HexCoord> remainingPath = currentPath.GetRange(currentPathIndex, currentPath.Count - currentPathIndex);
+            // Get remaining path
+            int currentIndex = movementController.CurrentPathIndex;
+            int futureIndex = currentIndex + 2; // Start from TWO cells ahead (skip current AND next)
             
-            if (remainingPath.Count > 0)
+            // Show only cells from currentIndex+2 onwards
+            if (futureIndex < currentPath.Count)
             {
+                List<HexCoord> remainingPath = currentPath.GetRange(futureIndex, currentPath.Count - futureIndex);
                 int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
                 committedPathVisualizer.ShowPath(hexGrid, CurrentPosition, remainingPath, maxMovement);
             }
@@ -499,7 +519,7 @@ namespace FollowMyFootsteps.Entities
             int pathCost = Pathfinding.GetPathCost(hexGrid, path);
             int turnsRequired = Mathf.CeilToInt((float)pathCost / maxMovement);
 
-            string movementType = isMoving ? "Course change" : "Movement";
+            string movementType = IsMoving ? "Course change" : "Movement";
             Debug.Log($"[PlayerController] {movementType} to {targetCoord}: {path.Count} steps, cost: {pathCost}, turns: {turnsRequired}");
 
             // Initiate movement along path (will override current movement if any)
@@ -535,11 +555,11 @@ namespace FollowMyFootsteps.Entities
                 Debug.Log($"[PlayerController] Multi-turn path: {pathLength} cells, will take {turnsRequired} turns");
             }
 
-            // Note: We don't consume AP here - it's consumed per-cell in MoveToNextPathStep()
+            // Note: We don't consume AP here - it's consumed per-cell in OnMovementStep()
             // This allows multi-turn paths to work automatically
 
             // Allow course changes: if already moving, just replace the path
-            if (isMoving)
+            if (IsMoving)
             {
                 Debug.Log("[PlayerController] Changing course to new destination");
             }
@@ -563,110 +583,72 @@ namespace FollowMyFootsteps.Entities
             previewedPath = null;
 #endif
 
-            // Store path and start movement
+            // Store path and start movement with MovementController
             currentPath = path;
-            currentPathIndex = 0;
 
-            // Move to first step
-            MoveToNextPathStep();
+            // Move to first step using MovementController
+            if (movementController != null)
+            {
+                movementController.FollowPath(path, startImmediately: true);
+            }
+        }
+
+        #region Movement Event Handlers
+
+        /// <summary>
+        /// Called when MovementController starts moving to a new hex (before animation).
+        /// </summary>
+        private void OnMovementStepStart(HexCoord targetCoord)
+        {
+            // Update path visualization immediately when starting to move
+            UpdateCommittedPathVisualization();
         }
 
         /// <summary>
-        /// Move to the next step in the current path.
+        /// Called when MovementController completes a step to a new hex.
         /// </summary>
-        private void MoveToNextPathStep()
+        private void OnMovementStep(HexCoord reachedCoord)
         {
-            if (currentPath == null || currentPathIndex >= currentPath.Count)
+            // Update player data position
+            playerData.Position = reachedCoord;
+
+            // Consume action point for this cell (if SimulationManager is managing turns)
+            if (SimulationManager.Instance != null)
             {
-                currentPath = null;
-                isMoving = false;
-                
-                // Hide committed path when destination reached
-                if (committedPathVisualizer != null)
+                if (!ConsumeActionPoints(MOVE_ACTION_COST))
                 {
-                    committedPathVisualizer.HidePath();
+                    // Out of AP - pause movement until next turn
+                    Debug.Log($"[PlayerController] Out of AP - movement will resume next turn");
+                    if (movementController != null)
+                    {
+                        movementController.PauseMovement();
+                    }
+                    return;
                 }
-                
-                return;
             }
 
-            HexCoord nextCoord = currentPath[currentPathIndex];
-            playerData.Position = nextCoord;
-            moveTargetPosition = HexMetrics.GetWorldPosition(nextCoord);
-            isMoving = true;
-
-            Debug.Log($"[PlayerController] Moving to {nextCoord} (step {currentPathIndex + 1}/{currentPath.Count})");
+            Debug.Log($"[PlayerController] Reached {reachedCoord}");
         }
 
         /// <summary>
-        /// Sets the player position immediately without animation.
+        /// Called when MovementController completes the entire path.
         /// </summary>
-        private void SetPosition(HexCoord coord, bool instant)
+        private void OnMovementComplete()
         {
-            Vector3 worldPos = HexMetrics.GetWorldPosition(coord);
+            // Path complete
+            currentPath = null;
             
-            if (instant)
+            // Hide committed path when destination reached
+            if (committedPathVisualizer != null)
             {
-                transform.position = worldPos;
-                isMoving = false;
+                committedPathVisualizer.HidePath();
             }
-            else
-            {
-                moveTargetPosition = worldPos;
-                isMoving = true;
-            }
+            
+            OnPlayerMoved?.Invoke(playerData.Position);
+            Debug.Log($"[PlayerController] Movement complete at {playerData.Position}");
         }
 
-        /// <summary>
-        /// Updates smooth movement animation.
-        /// </summary>
-        private void UpdateMovement()
-        {
-            if (playerDefinition == null)
-                return;
-
-            float step = playerDefinition.MovementSpeed * Time.deltaTime;
-            transform.position = Vector3.MoveTowards(transform.position, moveTargetPosition, step);
-
-            // Check if reached current target
-            if (Vector3.Distance(transform.position, moveTargetPosition) < 0.01f)
-            {
-                transform.position = moveTargetPosition;
-
-                // Consume action point for this cell (if SimulationManager is managing turns)
-                if (SimulationManager.Instance != null)
-                {
-                    if (!ConsumeActionPoints(MOVE_ACTION_COST))
-                    {
-                        // Out of AP - pause movement until next turn
-                        Debug.Log($"[PlayerController] Out of AP at cell {currentPathIndex + 1}/{currentPath.Count} - movement will resume next turn");
-                        isMoving = false;
-                        return;
-                    }
-                }
-
-                // Move to next step in path
-                currentPathIndex++;
-                if (currentPath != null && currentPathIndex < currentPath.Count)
-                {
-                    MoveToNextPathStep();
-                }
-                else
-                {
-                    // Path complete
-                    currentPath = null;
-                    isMoving = false;
-                    
-                    // Hide committed path when destination reached
-                    if (committedPathVisualizer != null)
-                    {
-                        committedPathVisualizer.HidePath();
-                    }
-                    
-                    OnPlayerMoved?.Invoke(playerData.Position);
-                }
-            }
-        }
+        #endregion
 
         /// <summary>
         /// Validates if movement to the target coordinate is allowed.

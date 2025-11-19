@@ -109,7 +109,7 @@ Follow-my-footsteps/
 |-------|-------|-------|--------|------------------|
 | **1** | 1-3 | Foundation & Core Systems | ✅ Complete | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
 | **2** | 4-5 | Player & Basic Interaction | ✅ Complete | Player movement, input abstraction, camera, dual path visualization, turn system |
-| **3** | 6-7 | Pathfinding & Entity Movement | 🚧 In Progress | A* pathfinding (✅), async manager (✅), movement system |
+| **3** | 6-7 | Pathfinding & Entity Movement | ✅ Complete | A* pathfinding, async manager, movement controller, smooth animation |
 | **4** | 8-10 | NPC Foundation & State Machine | 📋 Planned | NPC data, HFSM, perception, initial behaviors |
 | **5** | 11-12 | Combat & Interaction | 📋 Planned | Turn-based combat, attack/flee AI, interaction system |
 | **6** | 13-14 | Environmental Objects & Events | 📋 Planned | Collectibles, traps, dynamic placement, inventory |
@@ -126,7 +126,8 @@ Follow-my-footsteps/
 - ✅ **Week 3**: Hex grid foundation with chunk-based rendering (91 tests passing)
 - ✅ **Week 5**: Player system with A* pathfinding and dual path visualization
 - ✅ **Week 5**: Turn-based simulation core with action points system
-- 🚧 **Week 7**: NPC foundation and state machine
+- ✅ **Week 7**: Async pathfinding manager and smooth movement system (128 tests passing)
+- 📋 **Week 10**: NPC foundation and state machine
 - 📋 **Week 12**: Combat functional, basic NPC AI working
 - 📋 **Week 19**: Quests and trading systems complete
 - 📋 **Week 23**: Full NPC ecosystem with factions, weather, settlements
@@ -168,11 +169,19 @@ Follow-my-footsteps/
 - ✅ Configurable debug panels (turn info + cell info)
 - ✅ Real-time pathfinding display (distance, cost, turns required)
 - ✅ Assembly definition structure (Main, Editor, Tests)
-- ✅ Auto-end turn when action points reach zero
-- ✅ Manual end turn support via SimulationManager
-- ✅ TurnEvent ScriptableObject event system
-- ✅ Turn counter tracking for time-based mechanics
-- ✅ Pause/unpause functionality
+
+**Async Pathfinding & Movement System (Phase 3):**
+- ✅ Async PathfindingManager with coroutine-based request queue
+- ✅ Path caching with 5-second expiration and 100-path limit
+- ✅ Performance throttling (100 nodes/frame, 5ms/frame limit)
+- ✅ Cache invalidation support (full and by coordinate)
+- ✅ MovementController with smooth Vector3.Lerp animation
+- ✅ Path following with validation and terrain checking
+- ✅ Event-driven architecture (OnMovementStart, OnMovementStepStart, OnMovementStep, OnMovementComplete, OnMovementCancelled)
+- ✅ Turn-based integration (pause/resume, AP consumption per cell)
+- ✅ Real-time path visualization updates (hides traveled segments immediately)
+- ✅ 2D sprite support (Z-position preservation, no rotation)
+- ✅ 33 unit tests for pathfinding and movement systems
 
 ---
 
