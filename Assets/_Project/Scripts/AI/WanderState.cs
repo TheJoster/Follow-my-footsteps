@@ -115,13 +115,29 @@ namespace FollowMyFootsteps.AI
             
             if (path != null && path.Count > 0)
             {
-                Debug.Log($"[WanderState] {npc.EntityName} received path with {path.Count} steps. Starting movement.");
+                // Calculate AP cost (1 AP per hex cell)
+                int pathCost = path.Count;
+                
+                // Check if NPC has enough AP for the full path
+                if (npc.ActionPoints < pathCost)
+                {
+                    Debug.LogWarning($"[WanderState] {npc.EntityName} insufficient AP for path. Has {npc.ActionPoints}, needs {pathCost}. Skipping movement.");
+                    isMovingToTarget = false;
+                    return;
+                }
+                
+                // Consume AP for the movement
+                if (!npc.ConsumeActionPoints(pathCost))
+                {
+                    Debug.LogWarning($"[WanderState] {npc.EntityName} failed to consume {pathCost} AP");
+                    isMovingToTarget = false;
+                    return;
+                }
+                
+                Debug.Log($"[WanderState] {npc.EntityName} received path with {path.Count} steps, consumed {pathCost} AP. Remaining: {npc.ActionPoints}");
                 isMovingToTarget = true;
                 bool success = movement.FollowPath(path);
                 Debug.Log($"[WanderState] FollowPath returned: {success}");
-                
-                // When movement completes, reset flags
-                // MovementController will consume AP automatically during movement
             }
             else
             {

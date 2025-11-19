@@ -158,7 +158,26 @@ namespace FollowMyFootsteps.AI
             
             if (path != null && path.Count > 0)
             {
-                Debug.Log($"[PatrolState] {npc.EntityName} received path with {path.Count} steps. Starting movement.");
+                // Calculate AP cost (1 AP per hex cell)
+                int pathCost = path.Count;
+                
+                // Check if NPC has enough AP for the full path
+                if (npc.ActionPoints < pathCost)
+                {
+                    Debug.LogWarning($"[PatrolState] {npc.EntityName} insufficient AP for path. Has {npc.ActionPoints}, needs {pathCost}. Skipping movement.");
+                    isMovingToWaypoint = false;
+                    return;
+                }
+                
+                // Consume AP for the movement
+                if (!npc.ConsumeActionPoints(pathCost))
+                {
+                    Debug.LogWarning($"[PatrolState] {npc.EntityName} failed to consume {pathCost} AP");
+                    isMovingToWaypoint = false;
+                    return;
+                }
+                
+                Debug.Log($"[PatrolState] {npc.EntityName} received path with {path.Count} steps, consumed {pathCost} AP. Remaining: {npc.ActionPoints}");
                 isMovingToWaypoint = true;
                 bool success = movement.FollowPath(path);
                 Debug.Log($"[PatrolState] FollowPath returned: {success}");
