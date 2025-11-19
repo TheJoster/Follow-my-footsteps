@@ -25,15 +25,10 @@ namespace FollowMyFootsteps.AI
         /// </summary>
         /// <param name="home">Center point for wandering</param>
         /// <param name="radius">Maximum distance from home to wander (in hex cells)</param>
-        /// <param name="minWait">Minimum wait time at each location</param>
-        /// <param name="maxWait">Maximum wait time at each location</param>
-        public WanderState(HexCoord home, int radius = 5, float minWait = 2f, float maxWait = 5f)
+        public WanderState(HexCoord home, int radius = 5)
         {
             homePosition = home;
             wanderRadius = radius;
-            minWaitTime = minWait;
-            maxWaitTime = maxWait;
-            isWaiting = false;
         }
         
         public void OnEnter(object entity)
@@ -139,8 +134,6 @@ namespace FollowMyFootsteps.AI
         
         public void OnExit(object entity)
         {
-            isWaiting = false;
-            waitTimer = 0f;
             Debug.Log("[WanderState] Exited");
         }
         
@@ -170,17 +163,6 @@ namespace FollowMyFootsteps.AI
             isMovingToTarget = false;
             
             Debug.Log($"[WanderState] New wander target: {targetPosition}");
-        }
-        
-        /// <summary>
-        /// Start waiting at current location
-        /// </summary>
-        private void StartWaiting()
-        {
-            isWaiting = true;
-            waitTimer = 0f;
-            waitDuration = Random.Range(minWaitTime, maxWaitTime);
-            Debug.Log($"[WanderState] Arrived. Waiting for {waitDuration:F1}s");
         }
         
         /// <summary>
