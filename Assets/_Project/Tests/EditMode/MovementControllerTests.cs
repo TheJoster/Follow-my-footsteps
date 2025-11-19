@@ -94,7 +94,7 @@ namespace FollowMyFootsteps.Tests.EditMode
         [Test]
         public void FollowPath_WithNullPath_ReturnsFalse()
         {
-            LogAssert.Expect(LogType.Warning, "MovementController: Cannot follow null or empty path.");
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[MovementController\] .* Cannot follow null or empty path\."));
             
             // Act
             bool result = controller.FollowPath(null, startImmediately: false);
@@ -110,7 +110,7 @@ namespace FollowMyFootsteps.Tests.EditMode
             // Arrange
             var emptyPath = new List<HexCoord>();
             
-            LogAssert.Expect(LogType.Warning, "MovementController: Cannot follow null or empty path.");
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"\[MovementController\] .* Cannot follow null or empty path\."));
 
             // Act
             bool result = controller.FollowPath(emptyPath, startImmediately: false);

@@ -94,6 +94,8 @@ namespace FollowMyFootsteps.Tests.EditMode
             // Arrange
             var start = new HexCoord(0, 0);
             var goal = new HexCoord(5, 5);
+            
+            LogAssert.Expect(LogType.Error, "[PathfindingManager] RequestPath called with null grid!");
 
             // Act
             int requestId = manager.RequestPath(null, start, goal, null);
