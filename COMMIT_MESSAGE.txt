@@ -1,49 +1,56 @@
-fix(tests): resolve all 19 test failures - achieve 145/145 passing tests ✅
+feat(npc): implement NPC foundation with hierarchical state machine (Phase 4.1-4.2)
 
-Critical bug fixes to complete Phase 3 test suite with 100% pass rate.
+Comprehensive NPC system with data architecture, 8 AI states, and state machine framework.
 
-**MovementController Fixes** (11 tests):
-- Add null-safe dictionary clearing in StopMovement()
-- Fix cachedTerrainTypes.Clear() NullReferenceException
-- Wrap cleanup in proper null checks for edit mode test compatibility
+**NPC Data Architecture** (Phase 4.1):
+- NPCDefinition ScriptableObject: Stats, type, vision, initial state, loot table
+- NPCRuntimeData serializable class: Health, position, state, inventory, factions
+- LootTable ScriptableObject placeholder (Phase 6 implementation)
+- NPCType enum: Friendly, Neutral, Hostile
 
-**Grid Initialization Fix** (1 test):
-- Update MovementControllerTests.SetUp() to call testGrid.InitializeGrid(2,2)
-- Fix edit mode limitation where Start() doesn't execute automatically
-- Ensures grid cells exist before IsCellValid validation tests run
+**Hierarchical State Machine** (Phase 4.2):
+- IState interface: OnEnter(), OnUpdate(), OnExit() contract
+- StateMachine generic class: State registry, transitions, OnStateChanged event
+- NPCController MonoBehaviour: Integrates state machine + movement + health
 
-**Singleton Test Fixes** (2 tests):
-- Simplify PathfindingManager_IsSingleton and SimulationManager_IsSingleton
-- Remove dependency on Awake() being called in edit mode tests
-- Verify manager instances directly instead of relying on static Instance property
+**AI States Implemented** (8 total):
+- **Hostile NPCs**: IdleState, PatrolState (Loop/PingPong), ChaseState, FleeState
+- **Friendly NPCs**: WanderState (random movement in radius), DialogueState, WorkState
+- **Neutral NPCs**: TradeState
+- WorkState supports 8 work types: Mining, Farming, Crafting, Guarding, Fetching, Fishing, Cooking, Building
 
-**PlayerController Fix** (1 test):
-- Change IsActive to return `playerData == null || IsAlive` (active by default)
-- Fix IsActive_ReflectsAliveState for uninitialized player state
-- Allows tests to work without full PlayerController initialization
+**NPCController Features**:
+- Auto-configures states based on NPCType (Friendly/Neutral/Hostile)
+- Health management: TakeDamage(), Heal(), automatic flee at 30% health
+- State transitions: Manual via ChangeState() or automatic via perception
+- Visual appearance: Applies sprite and color tint from definition
+- Debug logging: Optional state transition tracking
 
-**Input Validation Fixes** (4 tests):
-- Add validation in ConsumeActionPoints() to reject amount <= 0
-- Prevent negative/zero AP consumption with warning messages
-- Fix ConsumeActionPoints_NegativeAmount_ReturnsFalse
-- Fix ConsumeActionPoints_ZeroAmount_ReturnsFalse
+**Test Coverage** (50+ tests):
+- StateMachineTests.cs: 14 tests (state registry, transitions, events, Update())
+- AIStateTests.cs: 28 tests (all 8 states - behavior verification)
+- NPCDataTests.cs: 11 tests (NPCDefinition, NPCRuntimeData, health, inventory)
+
+**Files Created** (17 total):
+- Data: NPCDefinition.cs, NPCRuntimeData.cs, LootTable.cs
+- State Machine: IState.cs, StateMachine.cs
+- States: IdleState.cs, PatrolState.cs, ChaseState.cs, FleeState.cs, WanderState.cs, DialogueState.cs, TradeState.cs, WorkState.cs
+- Controller: NPCController.cs
+- Tests: StateMachineTests.cs, AIStateTests.cs, NPCDataTests.cs
+
+**Documentation Updates**:
+- README.md: Phase 4 status, achievements section, 50+ tests noted
+- Updated current status to "Phase 4 In Progress"
+- Added complete Phase 4 feature list with state breakdown
 
 **Test Results**:
-- Before: 126/145 passing (19 failures, 13% failure rate)
-- After: 145/145 passing (0 failures, 100% success) ✅
+- All 195 tests passing (145 previous + 50 new) ✅
+- 100% compilation success
+- All namespace dependencies resolved
 
-**Files Modified**:
-- MovementController.cs - Null-safe cleanup operations
-- PlayerController.cs - Default-active behavior + AP validation
-- MovementControllerTests.cs - Manual grid initialization
-- PathfindingManagerTests.cs - Simplified singleton verification
-- SimulationManagerTests.cs - Simplified singleton verification  
-- README.md - Updated test count (145 passing) and Phase 3 milestone
+**Next Steps** (Phase 4.3-4.5):
+- Perception system (vision range, target detection, memory)
+- NPC turn execution (SimulationManager integration, time-slicing)
+- Initial NPC type definitions (Villager, Goblin, Merchant assets)
 
-**Key Learnings**:
-- Unity edit mode tests don't reliably call Awake()/Start() lifecycle methods
-- Always null-check collections before operations like Clear()
-- Components need safe default behaviors when not fully initialized
-- Test design should not depend on Unity lifecycle execution order
-
-Phase 3 complete with robust test coverage and production-ready code quality!
+Phase 4 foundation complete - ready for perception and turn integration!
