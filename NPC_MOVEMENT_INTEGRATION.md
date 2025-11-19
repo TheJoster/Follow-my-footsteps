@@ -51,9 +51,11 @@ Integrated PathfindingManager and MovementController with AI states to enable ac
 ```
 
 **AP Integration**:
-- Only requests path if NPC has action points (AP > 0)
-- Movement consumes AP automatically via MovementController
-- Turn ends when AP depleted
+- States validate `npc.ActionPoints >= pathCost` before moving
+- Consumes AP equal to path length (1 AP per hex) via `npc.ConsumeActionPoints(pathCost)`
+- Skips movement if insufficient AP
+- NPCs limited to 2-3 hexes per turn based on MaxActionPoints
+- See `PHASE_4.7_TURN_BASED_FIXES.md` for full AP implementation details
 
 ---
 
