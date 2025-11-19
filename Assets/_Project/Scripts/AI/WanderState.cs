@@ -82,10 +82,12 @@ namespace FollowMyFootsteps.AI
                 else if (!isMovingToTarget && !hasRequestedPath && npc.ActionPoints > 0)
                 {
                     var pathfinding = PathfindingManager.Instance;
-                    if (pathfinding != null)
+                    var hexGrid = UnityEngine.Object.FindFirstObjectByType<HexGrid>();
+                    
+                    if (pathfinding != null && hexGrid != null)
                     {
                         hasRequestedPath = true;
-                        pathfinding.RequestPath(HexGrid.Instance, currentPos, targetPosition,
+                        pathfinding.RequestPath(hexGrid, currentPos, targetPosition,
                             (path) => OnPathReceived(path, npc, movement));
                     }
                 }
