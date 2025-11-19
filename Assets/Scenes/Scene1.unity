@@ -296,6 +296,54 @@ MonoBehaviour:
   useBoundaries: 1
   hexGrid: {fileID: 1885503895}
   boundaryPadding: 5
+--- !u!1 &735170145
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 735170147}
+  - component: {fileID: 735170146}
+  m_Layer: 0
+  m_Name: PathFindingManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &735170146
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 735170145}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a923c4a8896ed1b4395614ffc50c6208, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps::FollowMyFootsteps.Grid.PathfindingManager
+  maxMillisecondsPerFrame: 5
+  enableCaching: 1
+  cacheExpirationTime: 5
+  maxCachedPaths: 100
+--- !u!4 &735170147
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 735170145}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 22.51096, y: 6.24575, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &815142309
 GameObject:
   m_ObjectHideFlags: 0
@@ -709,3 +757,4 @@ SceneRoots:
   - {fileID: 203714862}
   - {fileID: 2080132667}
   - {fileID: 1060154637}
+  - {fileID: 735170147}

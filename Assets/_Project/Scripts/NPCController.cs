@@ -112,7 +112,9 @@ namespace FollowMyFootsteps
         {
             if (!IsAlive) return;
             
-            // Update state machine
+            // Update state machine continuously for real-time AI behavior
+            // States handle their own timing (WanderState uses Time.deltaTime for wait timers)
+            // Movement is handled by MovementController coroutines
             stateMachine?.Update();
         }
 
