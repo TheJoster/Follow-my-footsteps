@@ -2,15 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Input;
+using FollowMyFootsteps.Core;
 
 namespace FollowMyFootsteps.Entities
 {
     /// <summary>
     /// Controls the player entity on the hex grid.
     /// Handles movement, combat, and interaction with the game world.
+    /// Implements ITurnEntity for turn-based simulation.
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : MonoBehaviour, ITurnEntity
     {
         #region Events
 
@@ -64,6 +66,11 @@ namespace FollowMyFootsteps.Entities
         private List<HexCoord> previewedPath; // Track the previewed path (mobile only)
 #endif
 
+        // Turn-based system fields
+        private int currentActionPoints = 3; // Start with max AP for testing without SimulationManager
+        private int maxActionPoints = 3;
+        private const int MOVE_ACTION_COST = 1;
+
         #endregion
 
         #region Properties
@@ -73,6 +80,63 @@ namespace FollowMyFootsteps.Entities
         public HexCoord CurrentPosition => playerData?.Position ?? startPosition;
         public bool IsAlive => playerData != null && playerData.CurrentHealth > 0;
         public bool IsMoving => isMoving;
+
+        #endregion
+
+        #region ITurnEntity Implementation
+
+        public string EntityName => "Player";
+        public bool IsActive => IsAlive;
+        public int ActionPoints => currentActionPoints;
+        public int MaxActionPoints => maxActionPoints;
+
+        public void TakeTurn()
+        {
+            // Player turn - input is handled through InputManager events
+            // This method is called when it becomes the player's turn
+            Debug.Log($"[PlayerController] Player turn started with {currentActionPoints} action points");
+        }
+
+        public void OnTurnStart()
+        {
+            // Refresh action points at start of turn
+            currentActionPoints = maxActionPoints;
+            Debug.Log($"[PlayerController] Turn started - Action points refreshed to {currentActionPoints}");
+            
+            // Resume movement if we have a path waiting
+            if (currentPath != null && currentPathIndex < currentPath.Count && !isMoving)
+            {
+                Debug.Log($"[PlayerController] Resuming movement to destination ({currentPath.Count - currentPathIndex} cells remaining)");
+                MoveToNextPathStep();
+            }
+        }
+
+        public void OnTurnEnd()
+        {
+            // End of turn cleanup
+            Debug.Log($"[PlayerController] Turn ended - {currentActionPoints} action points remaining");
+        }
+
+        public bool ConsumeActionPoints(int amount)
+        {
+            if (currentActionPoints >= amount)
+            {
+                currentActionPoints -= amount;
+                Debug.Log($"[PlayerController] Consumed {amount} action points - {currentActionPoints} remaining");
+                
+                // Auto-end turn if out of action points
+                if (currentActionPoints <= 0 && SimulationManager.Instance != null)
+                {
+                    Debug.Log("[PlayerController] Out of action points - ending turn");
+                    SimulationManager.Instance.EndPlayerTurn();
+                }
+                
+                return true;
+            }
+            
+            Debug.LogWarning($"[PlayerController] Not enough action points - need {amount}, have {currentActionPoints}");
+            return false;
+        }
 
         #endregion
 
@@ -111,11 +175,29 @@ namespace FollowMyFootsteps.Entities
         {
             Initialize();
             SubscribeToInput();
+            
+            // Register with SimulationManager
+            if (SimulationManager.Instance != null)
+            {
+                SimulationManager.Instance.RegisterEntity(this);
+                Debug.Log($"[PlayerController] Registered with SimulationManager - Starting with {currentActionPoints} AP");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerController] SimulationManager not found - turn system will not work!");
+                Debug.Log($"[PlayerController] Playing in free-movement mode with {currentActionPoints} AP");
+            }
         }
 
         private void OnDestroy()
         {
             UnsubscribeFromInput();
+            
+            // Unregister from SimulationManager
+            if (SimulationManager.Instance != null)
+            {
+                SimulationManager.Instance.UnregisterEntity(this);
+            }
         }
 
         private void Update()
@@ -437,6 +519,25 @@ namespace FollowMyFootsteps.Entities
                 return;
             }
 
+            // Check if it's player's turn (only if SimulationManager exists)
+            if (SimulationManager.Instance != null && !SimulationManager.Instance.IsPlayerTurn)
+            {
+                Debug.LogWarning("[PlayerController] Cannot move - not player's turn!");
+                return;
+            }
+
+            // Calculate how many turns this will take
+            int pathLength = path.Count;
+            int turnsRequired = Mathf.CeilToInt((float)pathLength / maxActionPoints);
+            
+            if (turnsRequired > 1)
+            {
+                Debug.Log($"[PlayerController] Multi-turn path: {pathLength} cells, will take {turnsRequired} turns");
+            }
+
+            // Note: We don't consume AP here - it's consumed per-cell in MoveToNextPathStep()
+            // This allows multi-turn paths to work automatically
+
             // Allow course changes: if already moving, just replace the path
             if (isMoving)
             {
@@ -532,6 +633,18 @@ namespace FollowMyFootsteps.Entities
             {
                 transform.position = moveTargetPosition;
 
+                // Consume action point for this cell (if SimulationManager is managing turns)
+                if (SimulationManager.Instance != null)
+                {
+                    if (!ConsumeActionPoints(MOVE_ACTION_COST))
+                    {
+                        // Out of AP - pause movement until next turn
+                        Debug.Log($"[PlayerController] Out of AP at cell {currentPathIndex + 1}/{currentPath.Count} - movement will resume next turn");
+                        isMoving = false;
+                        return;
+                    }
+                }
+
                 // Move to next step in path
                 currentPathIndex++;
                 if (currentPath != null && currentPathIndex < currentPath.Count)
@@ -543,6 +656,13 @@ namespace FollowMyFootsteps.Entities
                     // Path complete
                     currentPath = null;
                     isMoving = false;
+                    
+                    // Hide committed path when destination reached
+                    if (committedPathVisualizer != null)
+                    {
+                        committedPathVisualizer.HidePath();
+                    }
+                    
                     OnPlayerMoved?.Invoke(playerData.Position);
                 }
             }

@@ -1,9 +1,7 @@
 {
-    "name": "FollowMyFootsteps.Tests.EditMode",
-    "rootNamespace": "FollowMyFootsteps.Tests.EditMode",
+    "name": "FollowMyFootsteps.Editor",
+    "rootNamespace": "FollowMyFootsteps.Editor",
     "references": [
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
         "FollowMyFootsteps"
     ],
     "includePlatforms": [
@@ -14,9 +12,7 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "UNITY_INCLUDE_TESTS"
-    ],
+    "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
 }

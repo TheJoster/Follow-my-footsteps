@@ -12,6 +12,7 @@
 
 **Follow My Footsteps** is a hex-based tactical RPG featuring:
 
+- **Turn-Based Gameplay**: Action points system (3 AP per turn), strategic decision-making, player/NPC/processing phases
 - **Player-Controlled Actions**: Movement, combat, building, terrain modification, and item management
 - **Dual Path Visualization**: Committed destination path (solid) and preview path (semi-transparent) with multi-turn color coding
 - **Intelligent Camera System**: Smooth player following, edge panning, WASD navigation, and zoom controls
@@ -35,6 +36,7 @@
 | **Input** | Cross-Platform Abstraction | Unified PC/mobile input handling (hover, click, tap, drag) |
 | **Camera** | Custom HexCameraController | Smooth follow, edge pan, WASD, zoom, grid boundaries |
 | **Path Visualization** | Dual PathVisualizer System | Committed (solid) + preview (semi-transparent) paths |
+| **Turn System** | SimulationManager Singleton | Turn-based cycle with action points, ITurnEntity interface, event-driven |
 | **NPC AI** | Hierarchical Finite State Machine (HFSM) | Modular behavior states with perception system |
 | **Data Architecture** | ScriptableObjects | Content-driven design for NPCs, quests, items, terrain |
 | **UI** | TextMesh Pro | High-quality text rendering across devices |
@@ -99,14 +101,14 @@ Follow-my-footsteps/
 
 **Duration**: 27 weeks (~6-7 months)  
 **Target Commits**: 120-150 following conventional commit standards  
-**Current Status**: Phase 2.3 Complete (Camera Controller)
+**Current Status**: Phase 2.4 Complete (Turn-Based Simulation)
 
 ### Phase Overview
 
 | Phase | Weeks | Focus | Status | Key Deliverables |
 |-------|-------|-------|--------|------------------|
 | **1** | 1-3 | Foundation & Core Systems | ✅ Complete | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
-| **2** | 4-5 | Player & Basic Interaction | ✅ Phase 2.3 Complete | Player movement, input abstraction, camera, dual path visualization |
+| **2** | 4-5 | Player & Basic Interaction | ✅ Complete | Player movement, input abstraction, camera, dual path visualization, turn system |
 | **3** | 6-7 | Pathfinding & Entity Movement | 🚧 In Progress | A* pathfinding (✅), async manager, optimizations |
 | **4** | 8-10 | NPC Foundation & State Machine | 📋 Planned | NPC data, HFSM, perception, initial behaviors |
 | **5** | 11-12 | Combat & Interaction | 📋 Planned | Turn-based combat, attack/flee AI, interaction system |
@@ -122,17 +124,18 @@ Follow-my-footsteps/
 ### Major Milestones
 
 - ✅ **Week 3**: Hex grid foundation with chunk-based rendering (91 tests passing)
-- ✅ **Week 5**: Player system with A* pathfinding and dual path visualization  
-- 🚧 **Week 7**: Camera controls, turn-based simulation core
+- ✅ **Week 5**: Player system with A* pathfinding and dual path visualization
+- ✅ **Week 5**: Turn-based simulation core with action points system
+- 🚧 **Week 7**: NPC foundation and state machine
 - 📋 **Week 12**: Combat functional, basic NPC AI working
 - 📋 **Week 19**: Quests and trading systems complete
 - 📋 **Week 23**: Full NPC ecosystem with factions, weather, settlements
 - 📋 **Week 24**: Save/load and persistence complete
 - 📋 **Week 27**: Production-ready, tested, documented, optimized
 
-### Recent Achievements (Phase 2.3)
+### Recent Achievements (Phase 2)
 
-**Camera Controller System:**
+**Camera Controller System (Phase 2.3):**
 - ✅ Smooth player following with velocity damping
 - ✅ Zoom controls (scroll wheel, pinch) with smooth transitions
 - ✅ Edge panning (mouse near screen edges)
@@ -142,13 +145,34 @@ Follow-my-footsteps/
 - ✅ Auto-follow resume after manual control
 - ✅ Integration with InputManager events
 
-**Dual Path Visualization:**
+**Dual Path Visualization (Phase 2.3):**
 - ✅ Committed destination path (solid, 100% opacity)
 - ✅ Preview path (semi-transparent, 50% opacity)
 - ✅ Real-time path updates removing traveled portion
 - ✅ Multi-turn color coding (Green→Yellow→Orange→Magenta)
 - ✅ Works on both PC (hover) and mobile (tap)
 - ✅ No interference with edge panning or camera controls
+
+**Turn-Based Simulation Core (Phase 2.4):**
+- ✅ SimulationManager singleton managing turn cycle
+- ✅ Turn states: PlayerTurn → NPCTurn → Processing → repeat
+- ✅ ITurnEntity interface for all turn-based entities
+- ✅ Action points system (3 AP per turn, movement costs 1 AP)
+- ✅ Multi-turn pathfinding with auto-pause/resume
+- ✅ Per-cell AP consumption during movement
+- ✅ Auto-end turn when action points reach zero
+- ✅ Manual end turn support via SimulationManager
+- ✅ TurnEvent ScriptableObject event system
+- ✅ Turn counter tracking for time-based mechanics
+- ✅ Pause/unpause functionality
+- ✅ Configurable debug panels (turn info + cell info)
+- ✅ Real-time pathfinding display (distance, cost, turns required)
+- ✅ Assembly definition structure (Main, Editor, Tests)
+- ✅ Auto-end turn when action points reach zero
+- ✅ Manual end turn support via SimulationManager
+- ✅ TurnEvent ScriptableObject event system
+- ✅ Turn counter tracking for time-based mechanics
+- ✅ Pause/unpause functionality
 
 ---
 
@@ -307,8 +331,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Last Updated: November 19, 2025 - Phase 2.3 Complete*
-
 ---
 
-*Last Updated: November 16, 2025*
+*Last Updated: November 19, 2025 - Phase 2.4 Complete (Turn-Based Simulation with Real-Time Pathfinding Display)*

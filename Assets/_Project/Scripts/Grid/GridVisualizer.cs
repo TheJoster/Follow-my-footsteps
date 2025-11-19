@@ -60,13 +60,35 @@ namespace FollowMyFootsteps.Grid
         [Tooltip("Enable Pattern 3: Combat arena")]
         private bool enablePattern3_CombatArena = true;
 
+        [Header("Info Panel Settings")]
+        [SerializeField]
+        [Tooltip("Position of the hovered cell info panel")]
+        private InfoPanelPosition infoPanelPosition = InfoPanelPosition.TopRight;
+
+        [SerializeField]
+        [Tooltip("Offset from edge of screen")]
+        private Vector2 infoPanelOffset = new Vector2(10, 10);
+
+        [SerializeField]
+        [Tooltip("Size of the info panel")]
+        private Vector2 infoPanelSize = new Vector2(250, 180);
+
+        public enum InfoPanelPosition
+        {
+            TopLeft,
+            TopRight,
+            BottomLeft,
+            BottomRight,
+            Custom
+        }
+
         #endregion
 
         #region Fields
 
         private HexGrid hexGrid;
         private HexCell hoveredCell;
-        private Camera mainCamera;
+        private UnityEngine.Camera mainCamera;
         private GameObject hoverIndicator;
         private SpriteRenderer hoverSpriteRenderer;
 
@@ -77,7 +99,7 @@ namespace FollowMyFootsteps.Grid
         private void Awake()
         {
             hexGrid = GetComponent<HexGrid>();
-            mainCamera = Camera.main;
+            mainCamera = UnityEngine.Camera.main;
             
             // Create hover indicator sprite
             CreateHoverIndicator();
@@ -450,7 +472,7 @@ namespace FollowMyFootsteps.Grid
             if (mainCamera == null || hexGrid == null) return;
 
             // Get mouse position in world space
-            Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
             mouseWorldPos.z = 0;
 
             // Convert to hex coordinate
@@ -612,7 +634,7 @@ namespace FollowMyFootsteps.Grid
         {
             if (hoveredCell == null) return;
 
-            // Draw info box in top-left corner
+            // Draw info box with configurable position
             GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
             boxStyle.alignment = TextAnchor.UpperLeft;
             boxStyle.normal.textColor = Color.white;
@@ -630,7 +652,73 @@ namespace FollowMyFootsteps.Grid
                           $"Occupied: {hoveredCell.IsOccupied}\n" +
                           $"Movement Cost: {hoveredCell.GetMovementCost()}";
 
-            GUI.Box(new Rect(10, 10, 250, 120), info, boxStyle);
+            // Add pathfinding information from player position
+            var player = FindFirstObjectByType<FollowMyFootsteps.Entities.PlayerController>();
+            if (player != null && hexGrid != null)
+            {
+                var path = Pathfinding.FindPath(
+                    hexGrid, 
+                    player.CurrentPosition, 
+                    hoveredCell.Coordinates, 
+                    30 // search limit
+                );
+
+                if (path != null && path.Count > 0)
+                {
+                    int pathCost = Pathfinding.GetPathCost(hexGrid, path);
+                    int turnsRequired = Mathf.CeilToInt((float)pathCost / 3f); // 3 AP per turn
+                    
+                    info += $"\n--- Pathfinding ---";
+                    info += $"\nDistance: {path.Count} cells";
+                    info += $"\nPath Cost: {pathCost}";
+                    info += $"\nTurns Required: {turnsRequired}";
+                }
+                else
+                {
+                    info += $"\n--- Pathfinding ---";
+                    info += $"\nUnreachable!";
+                }
+            }
+
+            Rect panelRect = CalculateInfoPanelRect();
+            GUI.Box(panelRect, info, boxStyle);
+        }
+
+        private Rect CalculateInfoPanelRect()
+        {
+            float x = infoPanelOffset.x;
+            float y = infoPanelOffset.y;
+
+            switch (infoPanelPosition)
+            {
+                case InfoPanelPosition.TopLeft:
+                    x = infoPanelOffset.x;
+                    y = infoPanelOffset.y;
+                    break;
+
+                case InfoPanelPosition.TopRight:
+                    x = Screen.width - infoPanelSize.x - infoPanelOffset.x;
+                    y = infoPanelOffset.y;
+                    break;
+
+                case InfoPanelPosition.BottomLeft:
+                    x = infoPanelOffset.x;
+                    y = Screen.height - infoPanelSize.y - infoPanelOffset.y;
+                    break;
+
+                case InfoPanelPosition.BottomRight:
+                    x = Screen.width - infoPanelSize.x - infoPanelOffset.x;
+                    y = Screen.height - infoPanelSize.y - infoPanelOffset.y;
+                    break;
+
+                case InfoPanelPosition.Custom:
+                    // Use infoPanelOffset as absolute position
+                    x = infoPanelOffset.x;
+                    y = infoPanelOffset.y;
+                    break;
+            }
+
+            return new Rect(x, y, infoPanelSize.x, infoPanelSize.y);
         }
 
         #endregion

@@ -1,6 +1,6 @@
 {
-    "name": "FollowMyFootsteps.Grid",
-    "rootNamespace": "FollowMyFootsteps.Grid",
+    "name": "FollowMyFootsteps",
+    "rootNamespace": "FollowMyFootsteps",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

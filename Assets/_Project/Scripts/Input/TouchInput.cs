@@ -10,14 +10,14 @@ namespace FollowMyFootsteps.Input
     /// </summary>
     public class TouchInput : IInputProvider
     {
-        private Camera mainCamera;
+        private UnityEngine.Camera mainCamera;
         private Vector2 lastTouchPosition;
         private float lastPinchDistance;
         private bool isDragging;
 
         public TouchInput()
         {
-            mainCamera = Camera.main;
+            mainCamera = UnityEngine.Camera.main;
             if (mainCamera == null)
             {
                 Debug.LogWarning("[TouchInput] Main camera not found. Input will not work correctly.");

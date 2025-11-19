@@ -11,13 +11,13 @@ namespace FollowMyFootsteps.Input
     /// </summary>
     public class MouseKeyboardInput : IInputProvider
     {
-        private Camera mainCamera;
+        private UnityEngine.Camera mainCamera;
         private Vector2 lastMousePosition;
         private bool isDragging;
 
         public MouseKeyboardInput()
         {
-            mainCamera = Camera.main;
+            mainCamera = UnityEngine.Camera.main;
             if (mainCamera == null)
             {
                 Debug.LogWarning("[MouseKeyboardInput] Main camera not found. Input will not work correctly.");

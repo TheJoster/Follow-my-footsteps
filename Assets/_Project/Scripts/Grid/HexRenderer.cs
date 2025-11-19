@@ -42,7 +42,7 @@ namespace FollowMyFootsteps.Grid
 
         private HexGrid hexGrid;
         private Dictionary<HexChunk, GameObject> chunkRenderers;
-        private Camera mainCamera;
+        private UnityEngine.Camera mainCamera;
 
         #endregion
 
@@ -52,7 +52,7 @@ namespace FollowMyFootsteps.Grid
         {
             hexGrid = GetComponent<HexGrid>();
             chunkRenderers = new Dictionary<HexChunk, GameObject>();
-            mainCamera = Camera.main;
+            mainCamera = UnityEngine.Camera.main;
 
             // Create default material if none assigned
             if (spriteMaterial == null)

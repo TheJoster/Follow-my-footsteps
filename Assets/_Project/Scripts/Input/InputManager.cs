@@ -65,7 +65,7 @@ namespace FollowMyFootsteps.Input
         private HexGrid hexGrid;
 
         private IInputProvider inputProvider;
-        private Camera mainCamera;
+        private UnityEngine.Camera mainCamera;
 
         #endregion
 
@@ -86,7 +86,7 @@ namespace FollowMyFootsteps.Input
             // Auto-detect platform and create appropriate input provider
             InitializeInputProvider();
 
-            mainCamera = Camera.main;
+            mainCamera = UnityEngine.Camera.main;
             if (mainCamera == null)
             {
                 Debug.LogError("[InputManager] Main camera not found!");

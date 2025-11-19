@@ -112,7 +112,9 @@ namespace FollowMyFootsteps.Camera
 
         #region Fields
 
-        private new UnityEngine.Camera camera;
+#pragma warning disable CS0108
+        private UnityEngine.Camera camera;
+#pragma warning restore CS0108
         private Vector3 followVelocity;
         private float targetZoom;
         private float currentZoomVelocity;

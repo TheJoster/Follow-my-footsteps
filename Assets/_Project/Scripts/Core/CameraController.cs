@@ -6,7 +6,7 @@ namespace FollowMyFootsteps.Core
     /// Simple camera controller for panning and zooming in 2D.
     /// Supports both keyboard and mouse controls.
     /// </summary>
-    [RequireComponent(typeof(Camera))]
+    [RequireComponent(typeof(UnityEngine.Camera))]
     public class CameraController : MonoBehaviour
     {
         #region Serialized Fields
@@ -37,7 +37,7 @@ namespace FollowMyFootsteps.Core
 
         #region Fields
 
-        private Camera cam;
+        private UnityEngine.Camera cam;
         private Vector3 lastMousePosition;
         private bool isDragging;
 
@@ -47,7 +47,7 @@ namespace FollowMyFootsteps.Core
 
         private void Awake()
         {
-            cam = GetComponent<Camera>();
+            cam = GetComponent<UnityEngine.Camera>();
         }
 
         private void Update()

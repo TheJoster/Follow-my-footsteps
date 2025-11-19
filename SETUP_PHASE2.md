@@ -1,9 +1,9 @@
 # Phase 2: Player & Basic Interaction - Setup Guide
 
 **Project**: Follow My Footsteps  
-**Phase**: Phase 2.1-2.3 Complete  
+**Phase**: Phase 2.1-2.4 Complete  
 **Unity Version**: Unity 6000.2.12f1 (Unity 6)  
-**Status**: Phase 2.3 Complete
+**Status**: Phase 2.4 Complete (Turn-Based Simulation)
 
 ---
 
@@ -467,6 +467,185 @@ cam.RefreshBoundaries();   // Recalculate if grid changes
 - [x] Auto-follow resumes after manual control
 - [x] Boundaries prevent camera from leaving grid
 - [x] Path preview hides during edge panning
+
+---
+
+## Phase 2.4: Turn-Based Simulation Core
+
+**Goal**: Implement turn-based simulation managing player and NPC turn order with action points system, multi-turn pathfinding, and real-time pathfinding visualization.
+
+### Core Components
+
+**SimulationManager.cs** - Turn cycle manager (285 lines)
+- Singleton managing Player → NPC → Processing cycle
+- SimulationState enum: PlayerTurn, NPCTurn, Processing, Paused
+- Entity registration/unregistration system
+- NPC turn processing with configurable delays (0.5s default)
+- Turn counter tracking
+- Configurable debug panel (TopLeft default, 220x130px)
+- DebugPanelPosition enum for flexible UI placement
+- Methods: RegisterEntity(), UnregisterEntity(), EndPlayerTurn(), SetPaused()
+
+**ITurnEntity.cs** - Interface for turn-based entities (67 lines)
+- Properties: EntityName, IsActive, ActionPoints, MaxActionPoints
+- Methods: TakeTurn(), OnTurnStart(), OnTurnEnd(), ConsumeActionPoints()
+- Implemented by PlayerController for turn integration
+
+**TurnEvent.cs** - ScriptableObject event system (58 lines)
+- Decoupled communication for turn notifications
+- TurnEventData struct: TurnNumber, NewState, CurrentEntity
+- Raise/Register/Unregister methods for subscribers
+
+**TurnCounterUI.cs** - Turn event listener (70 lines)
+- Subscribes to TurnEvent ScriptableObjects
+- Logs turn state changes to console
+- Ready for UI elements (Text, Button) when needed
+
+**GridVisualizer.cs** - Enhanced with real-time pathfinding display (755 lines)
+- Shows hovered cell information panel
+- Real-time pathfinding from player to hovered cell
+- Displays: Distance (cells), Path Cost (total movement), Turns Required (AP-based)
+- Configurable info panel (TopRight default, 250x180px)
+- InfoPanelPosition enum for flexible UI placement
+- Handles unreachable destinations with "Unreachable!" message
+
+### Action Points System
+
+**PlayerController Turn Integration:**
+- Default: 3 action points per turn
+- Movement cost: 1 AP per hex cell
+- Multi-turn pathfinding: Paths automatically span multiple turns
+- Per-cell AP consumption: Deducts 1 AP when reaching each cell (not upfront)
+- Auto-pause movement: Stops when AP reaches 0
+- Auto-resume movement: Continues path on next turn start
+- OnTurnStart(): Refreshes AP to maximum (3), resumes paused movement
+- OnTurnEnd(): Cleanup and effects
+- ConsumeActionPoints(): Validates and deducts AP, auto-ends turn at 0
+- Registers with SimulationManager on Start()
+- Unregisters on Destroy()
+- Backward compatible: Works without SimulationManager (default 3 AP)
+
+### Turn Cycle Flow
+
+1. **Player Turn**
+   - SimulationManager state: PlayerTurn
+   - Player has 3 action points
+   - Can move, attack (future), build (future)
+   - Each action consumes AP
+   - Turn ends when AP = 0 or manual end
+
+2. **NPC Turn**
+   - SimulationManager processes each NPC
+   - 0.5s delay between NPCs for visibility
+   - Each NPC calls TakeTurn()
+   - OnTurnStart/OnTurnEnd for each NPC
+
+3. **Processing Phase**
+   - Environment updates (future)
+   - End-of-turn effects (future)
+   - Brief transition phase
+
+4. **Next Turn**
+   - Turn counter increments
+   - Back to PlayerTurn
+   - Player AP refreshed to 3
+
+### Testing Checklist
+
+- [x] SimulationManager singleton initialized
+- [x] Player registers with SimulationManager
+- [x] Turn starts in PlayerTurn state
+- [x] Player has 3 action points at start
+- [x] Movement consumes 1 AP per cell
+- [x] Multi-turn paths work (10+ cells)
+- [x] Movement pauses when AP reaches 0
+- [x] Movement resumes on next turn
+- [x] Action points update correctly
+- [x] Turn auto-ends when AP reaches 0
+- [x] Console logs show turn state changes
+- [x] Turn counter increments each cycle
+- [x] Player AP refreshes on new turn
+- [x] TurnEvent system fires correctly
+- [x] Debug panels display correctly (no overlap)
+- [x] Pathfinding display shows distance/cost/turns
+- [x] Assembly definitions compile properly
+- [x] No compilation errors or warnings
+
+### Assembly Definition Structure
+
+**FollowMyFootsteps.asmdef** (`Assets/_Project/Scripts/`)
+- Main game code assembly
+- Contains all game namespaces (Grid, Entities, Core, Input, Camera, etc.)
+- No external references (self-contained)
+- All platforms
+
+**FollowMyFootsteps.Editor.asmdef** (`Assets/_Project/Scripts/Entities/Editor/`)
+- Editor-only scripts
+- References: FollowMyFootsteps
+- Contains PlayerDefinitionSetup and editor utilities
+- Editor platform only
+
+**FollowMyFootsteps.Tests.EditMode.asmdef** (`Assets/_Project/Tests/EditMode/`)
+- Test assembly
+- References: FollowMyFootsteps, UnityEngine.TestRunner, UnityEditor.TestRunner
+- Contains all unit tests
+- Editor platform only
+
+**Benefits:**
+- Clean compilation order (Main → Editor/Tests)
+- No circular dependencies
+- Faster incremental compilation
+- Proper editor script isolation
+- Tests can reference main code
+
+### Files Created (Phase 2.4)
+
+1. `Assets/_Project/Scripts/Core/ITurnEntity.cs` (67 lines)
+2. `Assets/_Project/Scripts/Events/TurnEvent.cs` (58 lines)
+3. `Assets/_Project/Scripts/Core/SimulationManager.cs` (285 lines)
+4. `Assets/_Project/Scripts/UI/TurnCounterUI.cs` (70 lines)
+5. `Assets/_Project/Scripts/FollowMyFootsteps.asmdef` (main assembly)
+6. `Assets/_Project/Scripts/Entities/Editor/FollowMyFootsteps.Editor.asmdef` (editor assembly)
+7. `SETUP_PHASE2_4.md` (comprehensive implementation guide)
+8. `PHASE2_4_SUMMARY.md` (quick reference)
+
+### Files Modified (Phase 2.4)
+
+1. `Assets/_Project/Scripts/Entities/PlayerController.cs` (778 lines)
+   - Implements ITurnEntity interface
+   - Multi-turn pathfinding with auto-pause/resume
+   - Per-cell AP consumption
+   - Backward compatible with/without SimulationManager
+
+2. `Assets/_Project/Scripts/Grid/GridVisualizer.cs` (755 lines)
+   - Real-time pathfinding display
+   - Shows distance, path cost, turns required
+   - Configurable info panel positioning
+
+3. `Assets/_Project/Scripts/Grid/HexRenderer.cs`
+   - Fixed Camera namespace conflict (UnityEngine.Camera)
+
+4. `Assets/_Project/Scripts/Camera/HexCameraController.cs`
+   - Fixed Camera namespace conflict
+   - Removed unnecessary 'new' keyword
+
+5. `Assets/_Project/Tests/EditMode/FollowMyFootsteps.Tests.EditMode.asmdef`
+   - Updated to reference main assembly properly
+   - Added action points system (3 AP, 1 AP per move)
+   - Added turn cycle integration
+   - Registers/unregisters with SimulationManager
+
+### Phase 2.4 Success Criteria
+
+- ✅ Turn cycle executes: Player → NPCs → Processing → Repeat
+- ✅ Action points system working (3 AP per turn)
+- ✅ Movement consumes action points (1 AP per cell)
+- ✅ Auto-end turn when AP reaches zero
+- ✅ Turn counter increments correctly
+- ✅ Events fire on state changes
+- ✅ Console logging shows turn flow
+- ✅ Clean integration with existing player movement
+- ✅ No compilation errors or warnings
 
 ---
 
