@@ -51,7 +51,13 @@ namespace FollowMyFootsteps.AI
         public void OnUpdate(object entity)
         {
             NPCController npc = entity as NPCController;
-            if (npc == null) return;
+            if (npc == null)
+            {
+                Debug.LogError("[WanderState] OnUpdate called with null or invalid NPC!");
+                return;
+            }
+            
+            Debug.Log($"[WanderState] OnUpdate for {npc.EntityName}. Waiting: {isWaiting}, AP: {npc.ActionPoints}");
             
             if (isWaiting)
             {
@@ -60,6 +66,7 @@ namespace FollowMyFootsteps.AI
                 if (waitTimer >= waitDuration)
                 {
                     // Wait complete, pick new target
+                    Debug.Log($"[WanderState] {npc.EntityName} finished waiting. Picking new target.");
                     isWaiting = false;
                     PickNewWanderTarget(npc);
                 }
@@ -67,7 +74,11 @@ namespace FollowMyFootsteps.AI
             else
             {
                 var movement = npc.GetMovementController();
-                if (movement == null) return;
+                if (movement == null)
+                {
+                    Debug.LogError($"[WanderState] {npc.EntityName} has no MovementController!");
+                    return;
+                }
                 
                 HexCoord currentPos = npc.RuntimeData.Position;
                 
@@ -81,15 +92,37 @@ namespace FollowMyFootsteps.AI
                 // Request path if not already moving
                 else if (!isMovingToTarget && !hasRequestedPath && npc.ActionPoints > 0)
                 {
+                    // Check if MovementController is already moving
+                    if (movement.IsMoving)
+                    {
+                        Debug.Log($"[WanderState] {npc.EntityName} is already moving via MovementController");
+                        isMovingToTarget = true; // Sync our flag
+                        return;
+                    }
+                    
                     var pathfinding = PathfindingManager.Instance;
                     var hexGrid = UnityEngine.Object.FindFirstObjectByType<HexGrid>();
                     
-                    if (pathfinding != null && hexGrid != null)
+                    if (pathfinding == null)
                     {
-                        hasRequestedPath = true;
-                        pathfinding.RequestPath(hexGrid, currentPos, targetPosition,
-                            (path) => OnPathReceived(path, npc, movement));
+                        Debug.LogError($"[WanderState] PathfindingManager.Instance is null!");
+                        return;
                     }
+                    
+                    if (hexGrid == null)
+                    {
+                        Debug.LogError($"[WanderState] Could not find HexGrid in scene!");
+                        return;
+                    }
+                    
+                    Debug.Log($"[WanderState] {npc.EntityName} requesting path from {currentPos} to {targetPosition}");
+                    hasRequestedPath = true;
+                    pathfinding.RequestPath(hexGrid, currentPos, targetPosition,
+                        (path) => OnPathReceived(path, npc, movement));
+                }
+                else
+                {
+                    Debug.Log($"[WanderState] {npc.EntityName} skipping path request (isMoving: {isMovingToTarget}, hasRequested: {hasRequestedPath}, AP: {npc.ActionPoints})");
                 }
             }
         }
@@ -100,8 +133,10 @@ namespace FollowMyFootsteps.AI
             
             if (path != null && path.Count > 0)
             {
+                Debug.Log($"[WanderState] {npc.EntityName} received path with {path.Count} steps. Starting movement.");
                 isMovingToTarget = true;
-                movement.FollowPath(path);
+                bool success = movement.FollowPath(path);
+                Debug.Log($"[WanderState] FollowPath returned: {success}");
             }
             else
             {

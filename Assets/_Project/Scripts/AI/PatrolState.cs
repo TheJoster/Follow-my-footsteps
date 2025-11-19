@@ -62,13 +62,25 @@ namespace FollowMyFootsteps.AI
             if (waypoints.Count == 0) return;
             
             NPCController npc = entity as NPCController;
-            if (npc == null) return;
+            if (npc == null)
+            {
+                Debug.LogError("[PatrolState] OnUpdate called with null or invalid NPC!");
+                return;
+            }
+            
+            Debug.Log($"[PatrolState] OnUpdate called for {npc.EntityName}. AP: {npc.ActionPoints}, Moving: {isMovingToWaypoint}, HasRequested: {hasRequestedPath}");
             
             var movement = npc.GetMovementController();
-            if (movement == null) return;
+            if (movement == null)
+            {
+                Debug.LogError($"[PatrolState] {npc.EntityName} has no MovementController!");
+                return;
+            }
             
             HexCoord currentPos = npc.RuntimeData.Position;
             HexCoord targetWaypoint = waypoints[currentWaypointIndex];
+            
+            Debug.Log($"[PatrolState] {npc.EntityName} at {currentPos}, target waypoint: {targetWaypoint} (index {currentWaypointIndex})");
             
             // Check if we reached the current waypoint
             if (currentPos == targetWaypoint)
@@ -83,19 +95,45 @@ namespace FollowMyFootsteps.AI
             // If not moving and not already at waypoint, request path
             if (!isMovingToWaypoint && !hasRequestedPath)
             {
+                // Check if MovementController is already moving (important!)
+                if (movement.IsMoving)
+                {
+                    Debug.Log($"[PatrolState] {npc.EntityName} is already moving via MovementController");
+                    isMovingToWaypoint = true; // Sync our flag
+                    return;
+                }
+                
                 // Check if we have enough AP to move
                 if (npc.ActionPoints > 0)
                 {
                     var pathfinding = PathfindingManager.Instance;
                     var hexGrid = UnityEngine.Object.FindFirstObjectByType<HexGrid>();
                     
-                    if (pathfinding != null && hexGrid != null)
+                    if (pathfinding == null)
                     {
-                        hasRequestedPath = true;
-                        pathfinding.RequestPath(hexGrid, currentPos, targetWaypoint, 
-                            (path) => OnPathReceived(path, npc, movement));
+                        Debug.LogError($"[PatrolState] PathfindingManager.Instance is null!");
+                        return;
                     }
+                    
+                    if (hexGrid == null)
+                    {
+                        Debug.LogError($"[PatrolState] Could not find HexGrid in scene!");
+                        return;
+                    }
+                    
+                    Debug.Log($"[PatrolState] {npc.EntityName} requesting path from {currentPos} to {targetWaypoint}");
+                    hasRequestedPath = true;
+                    pathfinding.RequestPath(hexGrid, currentPos, targetWaypoint, 
+                        (path) => OnPathReceived(path, npc, movement));
                 }
+                else
+                {
+                    Debug.LogWarning($"[PatrolState] {npc.EntityName} has no AP! Cannot move.");
+                }
+            }
+            else
+            {
+                Debug.Log($"[PatrolState] {npc.EntityName} skipping path request (isMoving: {isMovingToWaypoint}, hasRequested: {hasRequestedPath})");
             }
             
             // Check for enemies via perception (future: transition to Chase)
@@ -112,8 +150,10 @@ namespace FollowMyFootsteps.AI
             
             if (path != null && path.Count > 0)
             {
+                Debug.Log($"[PatrolState] {npc.EntityName} received path with {path.Count} steps. Starting movement.");
                 isMovingToWaypoint = true;
-                movement.FollowPath(path);
+                bool success = movement.FollowPath(path);
+                Debug.Log($"[PatrolState] FollowPath returned: {success}");
             }
             else
             {

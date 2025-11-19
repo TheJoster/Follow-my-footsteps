@@ -432,19 +432,29 @@ namespace FollowMyFootsteps
         /// </summary>
         public void TakeTurn()
         {
-            if (!IsAlive) return;
+            if (!IsAlive)
+            {
+                Debug.LogWarning($"[NPCController] {EntityName} TakeTurn called but NPC is not alive!");
+                return;
+            }
+            
+            Debug.Log($"[NPCController] ===== {EntityName} TAKING TURN =====");
+            Debug.Log($"[NPCController] State: {CurrentState}, AP: {ActionPoints}/{MaxActionPoints}, Alive: {IsAlive}");
+            
+            if (stateMachine == null)
+            {
+                Debug.LogError($"[NPCController] {EntityName} has no state machine!");
+                return;
+            }
             
             // Update state machine (state decides what action to take)
-            stateMachine?.Update();
+            Debug.Log($"[NPCController] {EntityName} calling stateMachine.Update()...");
+            stateMachine.Update();
+            Debug.Log($"[NPCController] {EntityName} stateMachine.Update() completed");
             
             // States can use perception to detect targets
             // States can use movementController to move
             // States can consume action points for actions
-            
-            if (showDebugLogs)
-            {
-                Debug.Log($"[NPCController] {EntityName} taking turn in state: {CurrentState}");
-            }
         }
         
         /// <summary>
