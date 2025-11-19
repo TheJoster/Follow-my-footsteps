@@ -49,7 +49,18 @@ namespace FollowMyFootsteps.Grid
 
         private void Awake()
         {
-            Debug.Log($\"[PathfindingManager] Awake called\");\n            \n            if (Instance != null && Instance != this)\n            {\n                Debug.LogWarning($\"[PathfindingManager] Duplicate instance detected, destroying {gameObject.name}\");\n                Destroy(gameObject);\n                return;\n            }\n\n            Instance = this;\n            Debug.Log($\"[PathfindingManager] Instance singleton set successfully\");\n        }
+            Debug.Log("[PathfindingManager] Awake called");
+            
+            if (Instance != null && Instance != this)
+            {
+                Debug.LogWarning("[PathfindingManager] Duplicate instance detected, destroying " + gameObject.name);
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            Debug.Log("[PathfindingManager] Instance singleton set successfully");
+        }
 
         #endregion
 
@@ -60,7 +71,17 @@ namespace FollowMyFootsteps.Grid
         /// </summary>
         public int RequestPath(HexGrid grid, HexCoord start, HexCoord goal, Action<List<HexCoord>> onComplete, int priority = 0, int searchLimit = 100)
         {
-            Debug.Log($\"[PathfindingManager] RequestPath called: {start} -> {goal}, grid={grid != null}, Instance={Instance != null}\");\n            \n            if (grid == null)\n            {\n                Debug.LogError($\"[PathfindingManager] RequestPath called with null grid!\");\n                // Return -1 silently for null grid (allows test validation without log spam)\n                return -1;\n            }\n\n            int requestId = nextRequestId++;\n            Debug.Log($\"[PathfindingManager] Path request #{requestId} assigned\");
+            Debug.Log("[PathfindingManager] RequestPath called: " + start + " -> " + goal + ", grid=" + (grid != null) + ", Instance=" + (Instance != null));
+            
+            if (grid == null)
+            {
+                Debug.LogError("[PathfindingManager] RequestPath called with null grid!");
+                // Return -1 silently for null grid (allows test validation without log spam)
+                return -1;
+            }
+
+            int requestId = nextRequestId++;
+            Debug.Log("[PathfindingManager] Path request #" + requestId + " assigned");
 
             // Check cache first if enabled
             if (enableCaching)
