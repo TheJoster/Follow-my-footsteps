@@ -3,60 +3,42 @@ using UnityEngine;
 namespace FollowMyFootsteps.AI
 {
     /// <summary>
-    /// Idle state: NPC waits for a random duration, then may wander to nearby location
+    /// Idle state: NPC does nothing, waiting for events or state transitions
     /// Phase 4.2 - Initial States
+    /// Phase 4.7 - Turn-Based Integration
+    /// 
+    /// Turn-based behavior:
+    /// - Consumes no action points (NPC just waits)
+    /// - Can transition to other states based on NPCController logic (perception, etc.)
+    /// - Purely reactive state
     /// </summary>
     public class IdleState : IState
     {
         public string StateName => "Idle";
         
-        private float idleDuration;
-        private float idleTimer;
-        private float minIdleTime;
-        private float maxIdleTime;
-        
-        /// <summary>
-        /// Constructor
-        /// </summary>
-        /// <param name="minTime">Minimum idle duration in seconds</param>
-        /// <param name="maxTime">Maximum idle duration in seconds</param>
-        public IdleState(float minTime = 1f, float maxTime = 3f)
-        {
-            minIdleTime = minTime;
-            maxIdleTime = maxTime;
-        }
+        private int turnsIdled;
         
         public void OnEnter(object entity)
         {
-            // Set random idle duration
-            idleDuration = Random.Range(minIdleTime, maxIdleTime);
-            idleTimer = 0f;
-            
-            Debug.Log($"[IdleState] Entered. Will idle for {idleDuration:F2}s");
+            turnsIdled = 0;
+            Debug.Log($"[IdleState] Entered idle state");
         }
         
         public void OnUpdate(object entity)
         {
-            idleTimer += Time.deltaTime;
+            // Turn-based idle: Do nothing, just count turns
+            // NPCController will handle state transitions based on perception/events
+            turnsIdled++;
             
-            // TODO: When idle completes, decide next action
-            // - Could transition to PatrolState if NPC has patrol waypoints
-            // - Could transition to ChaseState if enemy detected via perception
-            // - Could wander to random nearby cell
+            Debug.Log($"[IdleState] NPC idling (turn {turnsIdled})");
             
-            if (idleTimer >= idleDuration)
-            {
-                // Idle complete - for now just reset
-                // NPCController will handle state transitions based on perception
-                Debug.Log("[IdleState] Idle duration complete");
-                idleTimer = 0f;
-                idleDuration = Random.Range(minIdleTime, maxIdleTime);
-            }
+            // Optional: Could auto-transition after certain turns
+            // For now, NPCController handles all transitions via perception system
         }
         
         public void OnExit(object entity)
         {
-            Debug.Log("[IdleState] Exited");
+            Debug.Log($"[IdleState] Exited after {turnsIdled} turns");
         }
     }
 }

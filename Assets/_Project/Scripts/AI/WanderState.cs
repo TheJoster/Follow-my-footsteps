@@ -57,73 +57,65 @@ namespace FollowMyFootsteps.AI
                 return;
             }
             
-            Debug.Log($"[WanderState] OnUpdate for {npc.EntityName}. Waiting: {isWaiting}, AP: {npc.ActionPoints}");
+            Debug.Log($"[WanderState] OnUpdate for {npc.EntityName}. AP: {npc.ActionPoints}");
             
-            if (isWaiting)
+            var movement = npc.GetMovementController();
+            if (movement == null)
             {
-                waitTimer += Time.deltaTime;
-                
-                if (waitTimer >= waitDuration)
-                {
-                    // Wait complete, pick new target
-                    Debug.Log($"[WanderState] {npc.EntityName} finished waiting. Picking new target.");
-                    isWaiting = false;
-                    PickNewWanderTarget(npc);
-                }
+                Debug.LogError($"[WanderState] {npc.EntityName} has no MovementController!");
+                return;
             }
-            else
+            
+            // Reset movement flags if movement is complete
+            if (isMovingToTarget && !movement.IsMoving)
             {
-                var movement = npc.GetMovementController();
-                if (movement == null)
+                Debug.Log($"[WanderState] {npc.EntityName} finished moving to {targetPosition}");
+                isMovingToTarget = false;
+                hasRequestedPath = false;
+            }
+            
+            HexCoord currentPos = npc.RuntimeData.Position;
+            
+            // Check if we need a new target
+            if (targetPosition == default || currentPos == targetPosition)
+            {
+                PickNewWanderTarget(npc);
+            }
+            
+            // Move toward target if we have AP and aren't already moving
+            if (npc.ActionPoints > 0 && !isMovingToTarget && !hasRequestedPath)
+            {
+                // Check if MovementController is already moving
+                if (movement.IsMoving)
                 {
-                    Debug.LogError($"[WanderState] {npc.EntityName} has no MovementController!");
+                    Debug.Log($"[WanderState] {npc.EntityName} is already moving via MovementController");
+                    isMovingToTarget = true; // Sync our flag
                     return;
                 }
                 
-                HexCoord currentPos = npc.RuntimeData.Position;
+                var pathfinding = PathfindingManager.Instance;
+                var hexGrid = UnityEngine.Object.FindFirstObjectByType<HexGrid>();
                 
-                // Check if reached target
-                if (currentPos == targetPosition)
+                if (pathfinding == null)
                 {
-                    StartWaiting();
-                    isMovingToTarget = false;
-                    hasRequestedPath = false;
+                    Debug.LogError($"[WanderState] PathfindingManager.Instance is null!");
+                    return;
                 }
-                // Request path if not already moving
-                else if (!isMovingToTarget && !hasRequestedPath && npc.ActionPoints > 0)
+                
+                if (hexGrid == null)
                 {
-                    // Check if MovementController is already moving
-                    if (movement.IsMoving)
-                    {
-                        Debug.Log($"[WanderState] {npc.EntityName} is already moving via MovementController");
-                        isMovingToTarget = true; // Sync our flag
-                        return;
-                    }
-                    
-                    var pathfinding = PathfindingManager.Instance;
-                    var hexGrid = UnityEngine.Object.FindFirstObjectByType<HexGrid>();
-                    
-                    if (pathfinding == null)
-                    {
-                        Debug.LogError($"[WanderState] PathfindingManager.Instance is null!");
-                        return;
-                    }
-                    
-                    if (hexGrid == null)
-                    {
-                        Debug.LogError($"[WanderState] Could not find HexGrid in scene!");
-                        return;
-                    }
-                    
-                    Debug.Log($"[WanderState] {npc.EntityName} requesting path from {currentPos} to {targetPosition}");
-                    hasRequestedPath = true;
-                    pathfinding.RequestPath(hexGrid, currentPos, targetPosition,
-                        (path) => OnPathReceived(path, npc, movement));
+                    Debug.LogError($"[WanderState] Could not find HexGrid in scene!");
+                    return;
                 }
-                else
-                {
-                    Debug.Log($"[WanderState] {npc.EntityName} skipping path request (isMoving: {isMovingToTarget}, hasRequested: {hasRequestedPath}, AP: {npc.ActionPoints})");
-                }
+                
+                Debug.Log($"[WanderState] {npc.EntityName} requesting path from {currentPos} to {targetPosition}");
+                hasRequestedPath = true;
+                pathfinding.RequestPath(hexGrid, currentPos, targetPosition,
+                    (path) => OnPathReceived(path, npc, movement));
+            }
+            else
+            {
+                Debug.Log($"[WanderState] {npc.EntityName} skipping movement (isMoving: {isMovingToTarget}, hasRequested: {hasRequestedPath}, AP: {npc.ActionPoints})");
             }
         }
         
@@ -137,12 +129,16 @@ namespace FollowMyFootsteps.AI
                 isMovingToTarget = true;
                 bool success = movement.FollowPath(path);
                 Debug.Log($"[WanderState] FollowPath returned: {success}");
+                
+                // When movement completes, reset flags
+                // MovementController will consume AP automatically during movement
             }
             else
             {
-                // No path found - pick new target
+                // No path found - pick new target next turn
                 Debug.LogWarning($"[WanderState] {npc.EntityName} cannot find path to {targetPosition}");
-                PickNewWanderTarget(npc);
+                isMovingToTarget = false;
+                hasRequestedPath = false;
             }
         }
         

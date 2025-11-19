@@ -77,6 +77,14 @@ namespace FollowMyFootsteps.AI
                 return;
             }
             
+            // Reset movement flags if movement is complete
+            if (isMovingToWaypoint && !movement.IsMoving)
+            {
+                Debug.Log($"[PatrolState] {npc.EntityName} finished moving");
+                isMovingToWaypoint = false;
+                hasRequestedPath = false;
+            }
+            
             HexCoord currentPos = npc.RuntimeData.Position;
             HexCoord targetWaypoint = waypoints[currentWaypointIndex];
             

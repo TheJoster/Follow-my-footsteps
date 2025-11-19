@@ -131,33 +131,12 @@ namespace FollowMyFootsteps
         
         private void Update()
         {
+            // NPCs are controlled by turn-based system via TakeTurn()
+            // State machine updates happen ONLY during NPC's turn, not every frame
+            // This prevents NPCs from moving continuously outside the turn system
+            
+            // Only update frame counter for debugging
             updateFrameCount++;
-            
-            // Log first 5 updates and every 60 frames to verify Update is being called
-            if (updateFrameCount <= 5 || updateFrameCount % 60 == 0)
-            {
-                Debug.Log($"[NPCController] Update #{updateFrameCount} on {EntityName}, IsAlive={IsAlive}, stateMachine={stateMachine != null}");
-            }
-            
-            if (!IsAlive)
-            {
-                if (updateFrameCount % 60 == 0)
-                {
-                    Debug.LogWarning($"[NPCController] {EntityName} Update called but NPC is not alive!");
-                }
-                return;
-            }
-            
-            // Update state machine continuously for real-time AI behavior
-            // States handle their own timing (WanderState uses Time.deltaTime for wait timers)
-            // Movement is handled by MovementController coroutines
-            if (stateMachine == null)
-            {
-                Debug.LogError($"[NPCController] {EntityName} has null stateMachine in Update()!");
-                return;
-            }
-            
-            stateMachine.Update();
         }
 
         /// <summary>
@@ -240,7 +219,7 @@ namespace FollowMyFootsteps
         /// </summary>
         private void AddFriendlyStates()
         {
-            stateMachine.AddState(new IdleState(2f, 5f));
+            stateMachine.AddState(new IdleState());
             stateMachine.AddState(new WanderState(runtimeData.Position, radius: 5));
             
             // Get patrol waypoints from NPC definition
@@ -268,7 +247,7 @@ namespace FollowMyFootsteps
         /// </summary>
         private void AddNeutralStates()
         {
-            stateMachine.AddState(new IdleState(3f, 8f));
+            stateMachine.AddState(new IdleState());
             stateMachine.AddState(new TradeState(maxDistance: 2f));
             stateMachine.AddState(new WorkState(runtimeData.Position, WorkState.WorkType.Crafting, duration: 4f));
             
@@ -283,7 +262,7 @@ namespace FollowMyFootsteps
         /// </summary>
         private void AddHostileStates()
         {
-            stateMachine.AddState(new IdleState(1f, 3f));
+            stateMachine.AddState(new IdleState());
             
             // Get patrol waypoints from NPC definition
             List<HexCoord> waypoints = npcDefinition != null ? npcDefinition.GetPatrolWaypoints() : new List<HexCoord>();
