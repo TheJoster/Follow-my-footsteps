@@ -168,6 +168,18 @@ namespace FollowMyFootsteps.Entities
 
             playerInstance = controller;
 
+            // Assign player to camera follow target
+            var cameraController = FindFirstObjectByType<FollowMyFootsteps.Camera.HexCameraController>();
+            if (cameraController != null)
+            {
+                cameraController.FollowTarget = playerObj.transform;
+                Debug.Log("[PlayerSpawner] Assigned player as camera follow target");
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerSpawner] HexCameraController not found in scene. Camera will not follow player.");
+            }
+
             Debug.Log($"[PlayerSpawner] Spawned player '{playerDefinition.PlayerName}' at {startPosition}");
         }
 

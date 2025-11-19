@@ -1,9 +1,9 @@
 # Phase 2: Player & Basic Interaction - Setup Guide
 
 **Project**: Follow My Footsteps  
-**Phase**: Phase 2.1-2.2 Complete  
+**Phase**: Phase 2.1-2.3 Complete  
 **Unity Version**: Unity 6000.2.12f1 (Unity 6)  
-**Status**: In Progress
+**Status**: Phase 2.3 Complete
 
 ---
 
@@ -14,8 +14,8 @@ Phase 2 builds the player system, input handling, camera controls, and turn-base
 ### Phase 2 Steps
 - **2.1 Input Abstraction Layer** ✅ Complete
 - **2.2 Player System** ✅ Complete
-- **2.3 Camera Controller** 📋 Next
-- **2.4 Turn-Based Simulation Core** 📋 Planned
+- **2.3 Camera Controller** ✅ Complete
+- **2.4 Turn-Based Simulation Core** 📋 Next
 
 ---
 
@@ -300,19 +300,175 @@ Tap different → New preview
 5. Platform compilation (mobile-only fields wrapped in preprocessor directives)
 6. Added `HexMetrics.GetNeighbors()` alias method
 
+### Multi-Turn Route System
+
+**Color-Coded Visualization:**
+- **Turn 1** (Green): Within movement range (0-5 cost)
+- **Turn 2** (Yellow): Requires second turn (6-10 cost)
+- **Turn 3** (Orange): Requires third turn (11-15 cost)
+- **Turn 4+** (Magenta): Requires four or more turns (16+ cost)
+
+**Features:**
+- Plan routes up to 10 turns ahead
+- Cost labels show total cost and turn number: "8 (T2)"
+- Mid-movement course changes supported
+- Path updates dynamically as player moves
+
+### Dual Path Visualization System
+
+**Committed Path (Solid):**
+- Shows actual destination route when moving
+- 100% opacity (full color)
+- Updates in real-time, showing only remaining path
+- Disappears when destination reached
+
+**Preview Path (Semi-Transparent):**
+- Shows potential route when hovering/tapping
+- 50% opacity (semi-transparent)
+- Updates with mouse/touch position
+- Doesn't interfere with edge panning
+- Works on both PC and mobile
+
+**Platform Behavior:**
+- **PC**: Hover for preview → Click for committed path
+- **Mobile**: Tap for preview → Tap again for committed path
+- Both paths visible simultaneously during movement
+
 ### Testing Checklist
 
-- [ ] Player spawns as bright cyan circle at (0,0)
-- [ ] **PC**: Hover shows path, click moves immediately
-- [ ] **Mobile**: Tap shows path, second tap moves
-- [ ] Green path for valid moves, red for invalid
-- [ ] Player routes around water automatically
-- [ ] Movement respects terrain costs
-- [ ] Cannot exceed movement range (default: 5)
-- [ ] Smooth step-by-step animation
-- [ ] Path hides when movement starts
+- [x] Player spawns as bright cyan circle at (0,0)
+- [x] **PC**: Hover shows preview path, click shows committed path
+- [x] **Mobile**: Tap shows preview path, second tap shows committed path
+- [x] Multi-turn color coding (Green→Yellow→Orange→Magenta)
+- [x] Player routes around water automatically
+- [x] Movement respects terrain costs
+- [x] Can plan routes beyond single turn range
+- [x] Smooth step-by-step animation
+- [x] Committed path updates, removing traveled portion
+- [x] Preview path semi-transparent, committed path solid
+- [x] Course changes during movement supported
 
 ---
 
-*Last updated: November 18, 2025*  
-*Phase 2.1-2.2 Complete - Input & Player Systems*
+## 📋 Phase 2.3: Camera Controller (Complete)
+
+### Objectives
+Implement intelligent camera system with smooth player following, manual controls, edge panning, and boundary constraints.
+
+### Files Created
+
+```
+Assets/_Project/Scripts/Camera/
+└── HexCameraController.cs         ✅ Complete camera control system
+```
+
+### Key Features
+
+**🎯 Smooth Follow System:**
+- Automatically follows player with velocity damping
+- Configurable smooth time (default: 0.3s)
+- Preserves camera Z-position
+- Auto-resumes after manual control (2 second delay)
+
+**🔍 Zoom Controls:**
+- Min zoom: 3 (close up)
+- Max zoom: 15 (zoomed out)  
+- Default zoom: 8
+- Smooth transitions with damping
+- **PC**: Scroll wheel
+- **Mobile**: Pinch gesture
+
+**🖱️ Manual Panning:**
+- **Right-click drag**: Manual camera pan (PC)
+- **Edge panning**: Move mouse to screen edges
+  - Triggers within 20 pixels of edge
+  - Pans at 10 units/second
+  - Works on all four edges
+- **WASD/Arrow keys**: Keyboard panning (15 units/second)
+- **Two-finger drag**: Touch panning (mobile)
+
+**🚧 Boundary Constraints:**
+- Auto-calculates from HexGrid size (64x64 cells default)
+- Prevents camera from leaving grid area
+- Adjustable padding around edges
+- Respects zoom level (wider view = tighter constraints)
+
+**🎮 Integration:**
+- Auto-finds and follows player on spawn
+- Subscribes to InputManager events
+- Disables path preview during edge panning
+- Public API for game events
+
+### Configuration
+
+**Inspector Settings:**
+- Follow smoothness: 0.1-2 seconds
+- Zoom speed multiplier: 0.1-2x
+- Pan speed multiplier: 0.5-5x
+- Edge pan threshold: 5-100 pixels
+- Edge pan speed: 1-20 units/second
+- Keyboard pan speed: 1-30 units/second
+- Auto-follow resume delay: 0-5 seconds
+- Boundary padding: 0-20 world units
+
+### Public API
+
+```csharp
+HexCameraController cam = FindObjectOfType<HexCameraController>();
+
+// Instant positioning
+cam.SnapToTarget();
+
+// Zoom control  
+cam.SetZoom(5f);           // Instant
+cam.SetZoomSmooth(10f);    // Smooth transition
+
+// Toggle features
+cam.SetAutoFollow(false);  // Disable following
+cam.SetAutoFollow(true);   // Re-enable
+
+// Update boundaries
+cam.RefreshBoundaries();   // Recalculate if grid changes
+```
+
+### Controls Summary
+
+**PC:**
+- **WASD/Arrows**: Pan camera
+- **Right-click + Drag**: Pan camera
+- **Mouse to edges**: Edge pan
+- **Scroll wheel**: Zoom in/out
+
+**Mobile:**
+- **Two-finger drag**: Pan camera
+- **Pinch**: Zoom in/out
+
+**Both:**
+- Camera automatically follows player
+- Manual control temporarily disables auto-follow
+- Auto-follow resumes after 2 seconds of no input
+
+### Bug Fixes Applied
+
+1. **Camera namespace conflicts**: Fixed `UnityEngine.Camera` references
+2. **Edge panning blocking**: Added `isEdgePanning` flag to prevent self-blocking
+3. **Path preview interference**: Preview hides during edge panning
+4. **Grid boundary calculation**: Properly calculates from HexGrid size
+5. **Auto-follow assignment**: PlayerSpawner auto-assigns follow target
+
+### Testing Checklist
+
+- [x] Camera follows player smoothly
+- [x] WASD/Arrow keys pan camera
+- [x] Right-click drag pans camera
+- [x] Edge panning works on all four edges
+- [x] Scroll wheel zooms smoothly
+- [x] Zoom respects min/max limits
+- [x] Auto-follow resumes after manual control
+- [x] Boundaries prevent camera from leaving grid
+- [x] Path preview hides during edge panning
+
+---
+
+*Last updated: November 19, 2025*  
+*Phase 2.1-2.3 Complete - Input, Player, and Camera Systems*

@@ -13,6 +13,8 @@
 **Follow My Footsteps** is a hex-based tactical RPG featuring:
 
 - **Player-Controlled Actions**: Movement, combat, building, terrain modification, and item management
+- **Dual Path Visualization**: Committed destination path (solid) and preview path (semi-transparent) with multi-turn color coding
+- **Intelligent Camera System**: Smooth player following, edge panning, WASD navigation, and zoom controls
 - **Autonomous NPC Ecosystem**: Self-sufficient NPCs with combat, resource gathering, trading, settlement building, and dynamic trap placement
 - **Simulation-Focused Gameplay**: Adjustable speed (0.5x-10x), pause mechanics, and observation mode for watching ecosystem evolution
 - **Scalable Architecture**: Mobile-optimized rendering supporting 50+ simultaneous NPCs with chunk-based world streaming
@@ -26,13 +28,15 @@
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| **Engine** | Unity 2022.3 LTS | Maximum stability for production |
+| **Engine** | Unity 6000.2.12f1 | Latest stable with enhanced performance |
 | **Rendering** | Universal Render Pipeline (URP) 2D | Mobile-optimized graphics pipeline |
 | **Grid System** | Axial Hex Coordinates | Pointy-top hexes with chunk-based streaming (16×16 cells) |
 | **Pathfinding** | A* Algorithm | Async processing with terrain cost calculation and caching |
+| **Input** | Cross-Platform Abstraction | Unified PC/mobile input handling (hover, click, tap, drag) |
+| **Camera** | Custom HexCameraController | Smooth follow, edge pan, WASD, zoom, grid boundaries |
+| **Path Visualization** | Dual PathVisualizer System | Committed (solid) + preview (semi-transparent) paths |
 | **NPC AI** | Hierarchical Finite State Machine (HFSM) | Modular behavior states with perception system |
 | **Data Architecture** | ScriptableObjects | Content-driven design for NPCs, quests, items, terrain |
-| **Camera** | Cinemachine 2.9.x | Smooth following with free-roam observation mode |
 | **UI** | TextMesh Pro | High-quality text rendering across devices |
 | **Persistence** | JSON Serialization | Save/load with version migration and cloud sync support |
 
@@ -95,34 +99,56 @@ Follow-my-footsteps/
 
 **Duration**: 27 weeks (~6-7 months)  
 **Target Commits**: 120-150 following conventional commit standards  
-**Current Status**: Planning Phase
+**Current Status**: Phase 2.3 Complete (Camera Controller)
 
 ### Phase Overview
 
-| Phase | Weeks | Focus | Key Deliverables |
-|-------|-------|-------|------------------|
-| **1** | 1-3 | Foundation & Core Systems | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
-| **2** | 4-5 | Player & Basic Interaction | Player movement, input abstraction, camera, turn-based simulation |
-| **3** | 6-7 | Pathfinding & Entity Movement | A* pathfinding, async manager, click-to-move, path visualization |
-| **4** | 8-10 | NPC Foundation & State Machine | NPC data, HFSM, perception, initial behaviors (Idle/Patrol/Chase) |
-| **5** | 11-12 | Combat & Interaction | Turn-based combat, attack/flee AI, interaction system, health bars |
-| **6** | 13-14 | Environmental Objects & Events | Collectibles, traps, dynamic trap placement, inventory, loot tables |
-| **7** | 15-16 | Building & Terrain Modification | Build mode, construction progress, terrain editing, resources |
-| **8** | 17-19 | Quest & Trading Systems | Quest objectives, quest givers, merchant trading, ally recruitment |
-| **9** | 20 | Simulation Speed & Observation | Speed control (0.5x-10x), pause, observation mode, performance optimization |
-| **10** | 21-23 | Advanced NPC Ecosystem | Skill progression, factions, NPC-to-NPC interactions, settlements, day/night, weather |
-| **11** | 24 | Save/Load & Persistence | Serialization, version migration, cloud saves, corruption recovery |
-| **12** | 25-26 | Mobile Optimization & Polish | Sprite atlasing, touch gestures, chunk streaming, animations, particles |
-| **13** | 27 | Testing & Documentation | 80%+ test coverage, unit/integration tests, comprehensive README |
+| Phase | Weeks | Focus | Status | Key Deliverables |
+|-------|-------|-------|--------|------------------|
+| **1** | 1-3 | Foundation & Core Systems | ✅ Complete | Hex grid, chunking, coordinates, rendering, ScriptableObjects |
+| **2** | 4-5 | Player & Basic Interaction | ✅ Phase 2.3 Complete | Player movement, input abstraction, camera, dual path visualization |
+| **3** | 6-7 | Pathfinding & Entity Movement | 🚧 In Progress | A* pathfinding (✅), async manager, optimizations |
+| **4** | 8-10 | NPC Foundation & State Machine | 📋 Planned | NPC data, HFSM, perception, initial behaviors |
+| **5** | 11-12 | Combat & Interaction | 📋 Planned | Turn-based combat, attack/flee AI, interaction system |
+| **6** | 13-14 | Environmental Objects & Events | 📋 Planned | Collectibles, traps, dynamic placement, inventory |
+| **7** | 15-16 | Building & Terrain Modification | 📋 Planned | Build mode, construction progress, terrain editing |
+| **8** | 17-19 | Quest & Trading Systems | 📋 Planned | Quest objectives, quest givers, merchant trading |
+| **9** | 20 | Simulation Speed & Observation | 📋 Planned | Speed control, pause, observation mode |
+| **10** | 21-23 | Advanced NPC Ecosystem | 📋 Planned | Skill progression, factions, NPC-to-NPC interactions |
+| **11** | 24 | Save/Load & Persistence | 📋 Planned | Serialization, version migration, cloud saves |
+| **12** | 25-26 | Mobile Optimization & Polish | 📋 Planned | Sprite atlasing, touch gestures, animations |
+| **13** | 27 | Testing & Documentation | 📋 Planned | 80%+ test coverage, unit/integration tests |
 
 ### Major Milestones
 
-- ✅ **Week 7**: Playable prototype with player movement and pathfinding
-- ✅ **Week 12**: Combat functional, basic NPC AI working
-- ✅ **Week 19**: Quests and trading systems complete
-- ✅ **Week 23**: Full NPC ecosystem with factions, weather, settlements
-- ✅ **Week 24**: Save/load and persistence complete
-- ✅ **Week 27**: Production-ready, tested, documented, optimized
+- ✅ **Week 3**: Hex grid foundation with chunk-based rendering (91 tests passing)
+- ✅ **Week 5**: Player system with A* pathfinding and dual path visualization  
+- 🚧 **Week 7**: Camera controls, turn-based simulation core
+- 📋 **Week 12**: Combat functional, basic NPC AI working
+- 📋 **Week 19**: Quests and trading systems complete
+- 📋 **Week 23**: Full NPC ecosystem with factions, weather, settlements
+- 📋 **Week 24**: Save/load and persistence complete
+- 📋 **Week 27**: Production-ready, tested, documented, optimized
+
+### Recent Achievements (Phase 2.3)
+
+**Camera Controller System:**
+- ✅ Smooth player following with velocity damping
+- ✅ Zoom controls (scroll wheel, pinch) with smooth transitions
+- ✅ Edge panning (mouse near screen edges)
+- ✅ WASD/Arrow key navigation
+- ✅ Right-click drag panning
+- ✅ Auto-calculated grid boundaries
+- ✅ Auto-follow resume after manual control
+- ✅ Integration with InputManager events
+
+**Dual Path Visualization:**
+- ✅ Committed destination path (solid, 100% opacity)
+- ✅ Preview path (semi-transparent, 50% opacity)
+- ✅ Real-time path updates removing traveled portion
+- ✅ Multi-turn color coding (Green→Yellow→Orange→Magenta)
+- ✅ Works on both PC (hover) and mobile (tap)
+- ✅ No interference with edge panning or camera controls
 
 ---
 
@@ -278,6 +304,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Project Lead**: TheJoster  
 **Repository**: [github.com/TheJoster/Follow-my-footsteps](https://github.com/TheJoster/Follow-my-footsteps)
+
+---
+
+*Last Updated: November 19, 2025 - Phase 2.3 Complete*
 
 ---
 

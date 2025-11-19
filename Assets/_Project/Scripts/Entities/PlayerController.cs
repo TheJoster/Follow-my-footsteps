@@ -57,7 +57,8 @@ namespace FollowMyFootsteps.Entities
         private Vector3 moveTargetPosition;
         private List<HexCoord> currentPath;
         private int currentPathIndex;
-        private PathVisualizer pathVisualizer;
+        private PathVisualizer committedPathVisualizer; // Shows the actual destination path
+        private PathVisualizer previewPathVisualizer;   // Shows hover preview
 #if !(UNITY_EDITOR || UNITY_STANDALONE)
         private HexCoord? previewedCell; // Track which cell is currently previewed (mobile only)
         private List<HexCoord> previewedPath; // Track the previewed path (mobile only)
@@ -81,12 +82,16 @@ namespace FollowMyFootsteps.Entities
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
 
-            // Get or add PathVisualizer
-            pathVisualizer = GetComponent<PathVisualizer>();
-            if (pathVisualizer == null)
-            {
-                pathVisualizer = gameObject.AddComponent<PathVisualizer>();
-            }
+            // Create committed path visualizer (solid, for destination)
+            GameObject committedPathObj = new GameObject("CommittedPathVisualizer");
+            committedPathObj.transform.SetParent(transform);
+            committedPathVisualizer = committedPathObj.AddComponent<PathVisualizer>();
+
+            // Create preview path visualizer (semi-transparent, for hover)
+            GameObject previewPathObj = new GameObject("PreviewPathVisualizer");
+            previewPathObj.transform.SetParent(transform);
+            previewPathVisualizer = previewPathObj.AddComponent<PathVisualizer>();
+            previewPathVisualizer.SetAlphaMultiplier(0.5f); // Semi-transparent preview
 
             // Auto-find HexGrid if not assigned
             if (hexGrid == null)
@@ -118,6 +123,7 @@ namespace FollowMyFootsteps.Entities
             if (isMoving)
             {
                 UpdateMovement();
+                UpdateCommittedPathVisualization();
             }
             
             // Always show path preview (allows course changes during movement)
@@ -239,24 +245,35 @@ namespace FollowMyFootsteps.Entities
 #if UNITY_EDITOR || UNITY_STANDALONE
             if (!IsAlive || InputManager.Instance == null || hexGrid == null)
             {
-                if (pathVisualizer != null && pathVisualizer.IsVisible)
+                if (previewPathVisualizer != null && previewPathVisualizer.IsVisible)
                 {
-                    pathVisualizer.HidePath();
+                    previewPathVisualizer.HidePath();
+                }
+                return;
+            }
+
+            // Don't show path preview during edge panning
+            var cameraController = FindFirstObjectByType<FollowMyFootsteps.Camera.HexCameraController>();
+            if (cameraController != null && cameraController.IsEdgePanning)
+            {
+                if (previewPathVisualizer != null && previewPathVisualizer.IsVisible)
+                {
+                    previewPathVisualizer.HidePath();
                 }
                 return;
             }
 
             // Get hex coordinate under pointer
             Vector2 pointerPos = InputManager.Instance.GetPointerPosition();
-            Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(pointerPos.x, pointerPos.y, 0));
+            Vector3 worldPos = UnityEngine.Camera.main.ScreenToWorldPoint(new Vector3(pointerPos.x, pointerPos.y, 0));
             HexCoord hoveredHex = HexMetrics.WorldToHex(worldPos);
 
             // Don't show path to current position
             if (hoveredHex.Equals(CurrentPosition))
             {
-                if (pathVisualizer != null)
+                if (previewPathVisualizer != null)
                 {
-                    pathVisualizer.HidePath();
+                    previewPathVisualizer.HidePath();
                 }
                 return;
             }
@@ -267,18 +284,46 @@ namespace FollowMyFootsteps.Entities
             List<HexCoord> path = Pathfinding.FindPath(hexGrid, CurrentPosition, hoveredHex, searchLimit);
 
             // Show path preview
-            if (pathVisualizer != null)
+            if (previewPathVisualizer != null)
             {
                 if (path != null && path.Count > 0)
                 {
-                    pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
+                    previewPathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
                 }
                 else
                 {
-                    pathVisualizer.HidePath();
+                    previewPathVisualizer.HidePath();
                 }
             }
 #endif
+        }
+
+        /// <summary>
+        /// Update committed path visualization to show only remaining path.
+        /// </summary>
+        private void UpdateCommittedPathVisualization()
+        {
+            if (committedPathVisualizer == null || currentPath == null || currentPathIndex >= currentPath.Count)
+            {
+                if (committedPathVisualizer != null)
+                {
+                    committedPathVisualizer.HidePath();
+                }
+                return;
+            }
+
+            // Get remaining path (from current index to end)
+            List<HexCoord> remainingPath = currentPath.GetRange(currentPathIndex, currentPath.Count - currentPathIndex);
+            
+            if (remainingPath.Count > 0)
+            {
+                int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
+                committedPathVisualizer.ShowPath(hexGrid, CurrentPosition, remainingPath, maxMovement);
+            }
+            else
+            {
+                committedPathVisualizer.HidePath();
+            }
         }
 
         private void HandleHexClicked(HexCoord clickedCoord)
@@ -304,7 +349,7 @@ namespace FollowMyFootsteps.Entities
                 Debug.Log($"[PlayerController] Confirming movement to {clickedCoord}");
                 MoveTo(previewedPath);
                 
-                // Clear preview state
+                // Clear preview state (preview visualizer will be hidden in MoveTo)
                 previewedCell = null;
                 previewedPath = null;
                 return;
@@ -320,9 +365,9 @@ namespace FollowMyFootsteps.Entities
                 Debug.LogWarning($"[PlayerController] No valid path to {clickedCoord}");
                 
                 // Clear any existing preview
-                if (pathVisualizer != null)
+                if (previewPathVisualizer != null)
                 {
-                    pathVisualizer.HidePath();
+                    previewPathVisualizer.HidePath();
                 }
                 previewedCell = null;
                 previewedPath = null;
@@ -335,9 +380,9 @@ namespace FollowMyFootsteps.Entities
 
             // Show path preview and store for confirmation
             Debug.Log($"[PlayerController] Previewing path to {clickedCoord}: {path.Count} steps, cost: {pathCost}, turns: {turnsRequired} (tap again to confirm)");
-            if (pathVisualizer != null)
+            if (previewPathVisualizer != null)
             {
-                pathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
+                previewPathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
             }
             
             previewedCell = clickedCoord;
@@ -399,9 +444,16 @@ namespace FollowMyFootsteps.Entities
             }
 
             // Hide path preview when starting movement
-            if (pathVisualizer != null)
+            if (previewPathVisualizer != null)
             {
-                pathVisualizer.HidePath();
+                previewPathVisualizer.HidePath();
+            }
+
+            // Show committed destination path (solid line)
+            if (committedPathVisualizer != null)
+            {
+                int maxMovement = playerDefinition != null ? playerDefinition.MovementRange : 5;
+                committedPathVisualizer.ShowPath(hexGrid, CurrentPosition, path, maxMovement);
             }
 
 #if !(UNITY_EDITOR || UNITY_STANDALONE)
@@ -427,6 +479,13 @@ namespace FollowMyFootsteps.Entities
             {
                 currentPath = null;
                 isMoving = false;
+                
+                // Hide committed path when destination reached
+                if (committedPathVisualizer != null)
+                {
+                    committedPathVisualizer.HidePath();
+                }
+                
                 return;
             }
 

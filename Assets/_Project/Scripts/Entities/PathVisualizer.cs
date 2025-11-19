@@ -13,6 +13,11 @@ namespace FollowMyFootsteps.Entities
     {
         [Header("Visual Settings")]
         [SerializeField]
+        [Tooltip("Alpha multiplier for all colors (0.5 = semi-transparent preview)")]
+        [Range(0.1f, 1f)]
+        private float alphaMultiplier = 1f;
+
+        [SerializeField]
         [Tooltip("Color for first turn (within movement range)")]
         private Color turn1Color = new Color(0f, 1f, 0f, 0.8f); // Green
 
@@ -104,13 +109,18 @@ namespace FollowMyFootsteps.Entities
         /// </summary>
         private Color GetTurnColor(int turnNumber)
         {
+            Color color;
             switch (turnNumber)
             {
-                case 1: return turn1Color;      // Green
-                case 2: return turn2Color;      // Yellow
-                case 3: return turn3Color;      // Orange
-                default: return turn4PlusColor; // Magenta
+                case 1: color = turn1Color; break;      // Green
+                case 2: color = turn2Color; break;      // Yellow
+                case 3: color = turn3Color; break;      // Orange
+                default: color = turn4PlusColor; break; // Magenta
             }
+            
+            // Apply alpha multiplier
+            color.a *= alphaMultiplier;
+            return color;
         }
 
         /// <summary>
@@ -279,6 +289,14 @@ namespace FollowMyFootsteps.Entities
         /// Check if path is currently visible.
         /// </summary>
         public bool IsVisible => isVisible;
+
+        /// <summary>
+        /// Set the alpha multiplier for this visualizer (0.5 = semi-transparent).
+        /// </summary>
+        public void SetAlphaMultiplier(float alpha)
+        {
+            alphaMultiplier = Mathf.Clamp01(alpha);
+        }
 
         private void OnDestroy()
         {
