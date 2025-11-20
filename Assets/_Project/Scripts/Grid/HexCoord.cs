@@ -107,6 +107,19 @@ namespace FollowMyFootsteps.Grid
 
         #endregion
 
+        #region Static Methods
+
+        /// <summary>
+        /// Calculate the distance between two hex coordinates.
+        /// Uses cube coordinate distance formula.
+        /// </summary>
+        public static int Distance(HexCoord a, HexCoord b)
+        {
+            return (Math.Abs(a.q - b.q) + Math.Abs(a.r - b.r) + Math.Abs(a.s - b.s)) / 2;
+        }
+
+        #endregion
+
         #region String Representation
 
         public override string ToString()

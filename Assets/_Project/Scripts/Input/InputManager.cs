@@ -46,6 +46,11 @@ namespace FollowMyFootsteps.Input
         public System.Action<HexCoord> OnHexClicked;
 
         /// <summary>
+        /// Invoked when right-click on a hex cell (attack/interact).
+        /// </summary>
+        public System.Action<HexCoord> OnHexRightClicked;
+
+        /// <summary>
         /// Invoked when camera drag is active.
         /// </summary>
         public System.Action<Vector2> OnCameraDrag;
@@ -54,6 +59,11 @@ namespace FollowMyFootsteps.Input
         /// Invoked when zoom input is detected.
         /// </summary>
         public System.Action<float> OnZoomInput;
+        
+        /// <summary>
+        /// Invoked when the player wants to end their turn (Space key).
+        /// </summary>
+        public System.Action OnEndTurnRequested;
 
         #endregion
 
@@ -145,7 +155,7 @@ namespace FollowMyFootsteps.Input
 
         private void ProcessInput()
         {
-            // Process hex click/tap
+            // Process hex click/tap (left-click)
             if (inputProvider.GetPrimaryActionDown())
             {
                 Vector3? clickWorldPos = inputProvider.GetClickPosition();
@@ -153,6 +163,32 @@ namespace FollowMyFootsteps.Input
                 {
                     HexCoord hexCoord = HexMetrics.WorldToHex(clickWorldPos.Value);
                     OnHexClicked?.Invoke(hexCoord);
+                }
+            }
+
+            // Process hex right-click (attack/interact)
+            if (inputProvider.GetSecondaryActionDown())
+            {
+                // Get mouse position for right-click (not using GetClickPosition which is for left-click)
+                if (mainCamera != null)
+                {
+                    Vector3 screenPos = UnityEngine.Input.mousePosition;
+                    Vector3 clickWorldPos = mainCamera.ScreenToWorldPoint(screenPos);
+                    
+                    if (hexGrid != null)
+                    {
+                        HexCoord hexCoord = HexMetrics.WorldToHex(clickWorldPos);
+                        Debug.Log($"[InputManager] Right-click detected at world pos {clickWorldPos} -> hex {hexCoord}");
+                        OnHexRightClicked?.Invoke(hexCoord);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[InputManager] Right-click detected but hexGrid is null");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[InputManager] Right-click detected but mainCamera is null");
                 }
             }
 
@@ -171,6 +207,13 @@ namespace FollowMyFootsteps.Input
             if (Mathf.Abs(zoomDelta) > 0.01f)
             {
                 OnZoomInput?.Invoke(zoomDelta);
+            }
+            
+            // Process end turn input (Space key)
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Space))
+            {
+                OnEndTurnRequested?.Invoke();
+                Debug.Log("[InputManager] End turn requested (Space)");
             }
         }
 

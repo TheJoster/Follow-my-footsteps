@@ -130,6 +130,14 @@ namespace FollowMyFootsteps.Input
         }
 
         /// <inheritdoc/>
+        public bool GetSecondaryActionDown()
+        {
+            // For mobile, could implement long-press detection here
+            // For now, return false (no secondary action on touch)
+            return false;
+        }
+
+        /// <inheritdoc/>
         public Vector2 GetPointerPosition()
         {
             if (UnityEngine.Input.touchCount > 0)

@@ -44,6 +44,13 @@ namespace FollowMyFootsteps.Input
         bool GetPrimaryActionDown();
 
         /// <summary>
+        /// Checks if the secondary action button was pressed this frame.
+        /// (Right mouse button on PC, long-press on mobile)
+        /// </summary>
+        /// <returns>True if secondary action was pressed this frame.</returns>
+        bool GetSecondaryActionDown();
+
+        /// <summary>
         /// Gets the screen position of the primary pointer (mouse or first touch).
         /// Used for UI raycasting and world position conversion.
         /// </summary>

@@ -75,5 +75,13 @@ namespace FollowMyFootsteps.Entities
         public NPCRuntimeData()
         {
         }
+
+        /// <summary>
+        /// Consume action points for an action
+        /// </summary>
+        public void ConsumeActionPoints(int amount)
+        {
+            CurrentActionPoints = Math.Max(0, CurrentActionPoints - amount);
+        }
     }
 }

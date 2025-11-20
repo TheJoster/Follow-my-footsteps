@@ -95,6 +95,17 @@ namespace FollowMyFootsteps.Input
         }
 
         /// <inheritdoc/>
+        public bool GetSecondaryActionDown()
+        {
+            bool isDown = UnityEngine.Input.GetMouseButtonDown(1);
+            if (isDown)
+            {
+                Debug.Log("[MouseKeyboardInput] Right-click detected (GetMouseButtonDown(1))");
+            }
+            return isDown;
+        }
+
+        /// <inheritdoc/>
         public Vector2 GetPointerPosition()
         {
             Vector3 mousePos = UnityEngine.Input.mousePosition;

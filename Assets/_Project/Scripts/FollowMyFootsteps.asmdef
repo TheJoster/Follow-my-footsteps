@@ -1,7 +1,9 @@
 {
     "name": "FollowMyFootsteps",
     "rootNamespace": "FollowMyFootsteps",
-    "references": [],
+    "references": [
+        "Unity.TextMeshPro"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

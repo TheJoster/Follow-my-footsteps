@@ -27,6 +27,10 @@ namespace FollowMyFootsteps.Entities
         [Tooltip("Reference to hex grid (auto-finds if not assigned)")]
         private HexGrid hexGrid;
 
+        [SerializeField]
+        [Tooltip("Reference to entity factory (auto-finds if not assigned)")]
+        private EntityFactory entityFactory;
+
         private PlayerController playerInstance;
 
         private void Awake()
@@ -44,6 +48,20 @@ namespace FollowMyFootsteps.Entities
                 else
                 {
                     Debug.LogError("[PlayerSpawner] HexGrid not found in scene!");
+                }
+            }
+
+            // Auto-find EntityFactory if not assigned
+            if (entityFactory == null)
+            {
+                entityFactory = FindFirstObjectByType<EntityFactory>();
+                if (entityFactory != null)
+                {
+                    Debug.Log("[PlayerSpawner] Found EntityFactory");
+                }
+                else
+                {
+                    Debug.LogWarning("[PlayerSpawner] EntityFactory not found in scene! Right-click attacks will not work.");
                 }
             }
 
@@ -164,7 +182,7 @@ namespace FollowMyFootsteps.Entities
             PlayerController controller = playerObj.AddComponent<PlayerController>();
             
             // Set configuration before Initialize is called
-            controller.SetConfiguration(playerDefinition, hexGrid, startPosition);
+            controller.SetConfiguration(playerDefinition, hexGrid, startPosition, entityFactory);
 
             playerInstance = controller;
 

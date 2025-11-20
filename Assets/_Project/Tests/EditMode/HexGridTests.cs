@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using FollowMyFootsteps.Grid;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace FollowMyFootsteps.Tests.EditMode
 {
@@ -178,6 +179,20 @@ namespace FollowMyFootsteps.Tests.EditMode
             var cells = grid.GetCellsInRange(new HexCoord(1000, 1000), 1);
             
             Assert.AreEqual(0, cells.Count);
+        }
+
+        [Test]
+        public void GetCellAtWorldPosition_ReturnsCellForWorldPoint()
+        {
+            grid.InitializeGrid(1, 1);
+
+            var targetCoord = new HexCoord(3, 5);
+            Vector3 worldPosition = HexMetrics.GetWorldPosition(targetCoord) + new Vector3(0.1f, -0.05f, 0f);
+
+            HexCell cell = grid.GetCellAtWorldPosition(worldPosition);
+
+            Assert.IsNotNull(cell);
+            Assert.AreEqual(targetCoord, cell.Coordinates);
         }
 
         [Test]

@@ -3,6 +3,7 @@ using UnityEngine;
 using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Input;
 using FollowMyFootsteps.Core;
+using FollowMyFootsteps.Combat;
 
 namespace FollowMyFootsteps.Entities
 {
@@ -44,6 +45,10 @@ namespace FollowMyFootsteps.Entities
         [Tooltip("Reference to the hex grid")]
         private HexGrid hexGrid;
 
+        [SerializeField]
+        [Tooltip("Reference to the entity factory for finding NPCs")]
+        private EntityFactory entityFactory;
+
         [Header("Starting Position")]
         [SerializeField]
         [Tooltip("Starting hex coordinate")]
@@ -56,6 +61,7 @@ namespace FollowMyFootsteps.Entities
         private PlayerData playerData;
         private SpriteRenderer spriteRenderer;
         private MovementController movementController;
+        private HealthComponent healthComponent;
         private List<HexCoord> currentPath;
         private PathVisualizer committedPathVisualizer; // Shows the actual destination path
         private PathVisualizer previewPathVisualizer;   // Shows hover preview
@@ -100,6 +106,7 @@ namespace FollowMyFootsteps.Entities
             // Refresh action points at start of turn
             currentActionPoints = maxActionPoints;
             Debug.Log($"[PlayerController] Turn started - Action points refreshed to {currentActionPoints}");
+            LogToCombatPanel($"🔄 Turn started - {currentActionPoints} AP");
             
             // Resume movement if we have a path waiting
             if (currentPath != null && movementController != null && !IsMoving)
@@ -150,6 +157,13 @@ namespace FollowMyFootsteps.Entities
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
 
+            // Create or get HealthComponent
+            healthComponent = GetComponent<HealthComponent>();
+            if (healthComponent == null)
+            {
+                healthComponent = gameObject.AddComponent<HealthComponent>();
+            }
+
             // Create MovementController
             movementController = gameObject.AddComponent<MovementController>();
             movementController.OnMovementStepStart += OnMovementStepStart;
@@ -185,6 +199,14 @@ namespace FollowMyFootsteps.Entities
         {
             Initialize();
             SubscribeToInput();
+            
+            // Initialize HealthComponent
+            if (healthComponent != null && playerDefinition != null)
+            {
+                healthComponent.Initialize(playerDefinition.MaxHealth);
+                healthComponent.OnDeath.AddListener(OnPlayerDeath);
+                Debug.Log($"[PlayerController] Health initialized: {healthComponent.CurrentHealth}/{healthComponent.MaxHealth}");
+            }
             
             // Initialize MovementController with grid
             if (movementController != null && hexGrid != null)
@@ -240,11 +262,17 @@ namespace FollowMyFootsteps.Entities
         /// Sets the configuration for the player controller.
         /// Must be called before Initialize() when creating player programmatically.
         /// </summary>
-        public void SetConfiguration(PlayerDefinition definition, HexGrid grid, HexCoord startPos)
+        public void SetConfiguration(PlayerDefinition definition, HexGrid grid, HexCoord startPos, EntityFactory factory = null)
         {
             playerDefinition = definition;
             hexGrid = grid;
             startPosition = startPos;
+            entityFactory = factory;
+            
+            if (entityFactory == null)
+            {
+                Debug.LogWarning("[PlayerController] EntityFactory not provided - right-click attacks will not work!");
+            }
         }
 
         /// <summary>
@@ -328,6 +356,7 @@ namespace FollowMyFootsteps.Entities
             if (InputManager.Instance != null)
             {
                 InputManager.Instance.OnHexClicked += HandleHexClicked;
+                InputManager.Instance.OnHexRightClicked += HandleHexRightClicked;
             }
         }
 
@@ -337,6 +366,7 @@ namespace FollowMyFootsteps.Entities
             if (InputManager.Instance != null)
             {
                 InputManager.Instance.OnHexClicked -= HandleHexClicked;
+                InputManager.Instance.OnHexRightClicked -= HandleHexRightClicked;
             }
         }
 
@@ -496,6 +526,24 @@ namespace FollowMyFootsteps.Entities
             previewedCell = clickedCoord;
             previewedPath = path;
 #endif
+        }
+
+        /// <summary>
+        /// Handles right-click on hex for attack/interact.
+        /// </summary>
+        private void HandleHexRightClicked(HexCoord clickedCoord)
+        {
+            Debug.Log($"[PlayerController] HandleHexRightClicked called for coord {clickedCoord}");
+            
+            // Only process input if alive and has action points
+            if (!IsAlive || currentActionPoints <= 0)
+            {
+                Debug.Log($"[PlayerController] Cannot attack: IsAlive={IsAlive}, AP={currentActionPoints}");
+                return;
+            }
+
+            // Try to attack the target
+            TryAttackTarget(clickedCoord);
         }
 
         #endregion
@@ -703,53 +751,187 @@ namespace FollowMyFootsteps.Entities
         #region Combat
 
         /// <summary>
-        /// Apply damage to the player.
+        /// Attempts to attack an NPC at the target position.
+        /// Checks range, line of sight, and action points before attacking.
         /// </summary>
-        public void TakeDamage(int damage)
+        public bool TryAttackTarget(HexCoord targetCoord)
         {
-            if (!IsAlive)
+            if (!IsAlive || healthComponent == null || hexGrid == null)
+            {
+                Debug.LogWarning("[PlayerController] Cannot attack: not alive or missing components");
+                LogToCombatPanel("Cannot attack: not alive");
+                return false;
+            }
+
+            if (playerDefinition == null)
+            {
+                Debug.LogError("[PlayerController] Cannot attack: PlayerDefinition is null");
+                return false;
+            }
+
+            // Check if there's an NPC at the target position
+            HexCell targetCell = hexGrid.GetCell(targetCoord);
+            if (targetCell == null || !targetCell.IsOccupied)
+            {
+                Debug.Log($"[PlayerController] No target at {targetCoord}");
+                LogToCombatPanel($"No target at {targetCoord}");
+                return false;
+            }
+
+            // Find NPC at target coordinate
+            NPCController npcTarget = FindNPCAtCoord(targetCoord);
+            GameObject targetObject = npcTarget != null ? npcTarget.gameObject : null;
+            
+            if (npcTarget == null || targetObject == null)
+            {
+                Debug.Log($"[PlayerController] Target at {targetCoord} is not an NPC");
+                LogToCombatPanel($"Target not an NPC");
+                return false;
+            }
+
+            // Check if target is alive
+            HealthComponent targetHealth = targetObject.GetComponent<HealthComponent>();
+            if (targetHealth == null || targetHealth.IsDead)
+            {
+                Debug.Log($"[PlayerController] Target at {targetCoord} is already dead");
+                LogToCombatPanel($"Target already dead");
+                return false;
+            }
+
+            // Check attack range
+            int distance = HexCoord.Distance(CurrentPosition, targetCoord);
+            if (distance > playerDefinition.AttackRange)
+            {
+                Debug.Log($"[PlayerController] Target out of range: {distance} > {playerDefinition.AttackRange}");
+                LogToCombatPanel($"Out of range ({distance}/{playerDefinition.AttackRange})");
+                return false;
+            }
+
+            // Check action points
+            int attackCost = CombatSystem.GetAttackAPCost("melee");
+            if (currentActionPoints < attackCost)
+            {
+                Debug.Log($"[PlayerController] Not enough AP to attack: {currentActionPoints} < {attackCost}");
+                LogToCombatPanel($"Need {attackCost} AP (have {currentActionPoints})");
+                return false;
+            }
+
+            // Perform attack
+            int damageDealt = CombatSystem.DealDamage(
+                attacker: gameObject,
+                target: targetObject,
+                baseDamage: playerDefinition.AttackDamage,
+                damageType: DamageType.Physical,
+                canCrit: true
+            );
+
+            // Consume action points
+            currentActionPoints -= attackCost;
+            Debug.Log($"[PlayerController] Attacked {targetObject.name} at {targetCoord} for {damageDealt} damage ({currentActionPoints} AP remaining)");
+            LogToCombatPanel($"⚔️ Hit {targetObject.name}: {damageDealt} dmg");
+
+            // Check if target was killed
+            if (targetHealth.IsDead)
+            {
+                Debug.Log($"[PlayerController] Killed {targetObject.name}!");
+                LogToCombatPanel($"💀 Killed {targetObject.name}!");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Apply damage to the player via HealthComponent.
+        /// </summary>
+        public void TakeDamage(int damage, GameObject attacker = null)
+        {
+            if (!IsAlive || healthComponent == null)
                 return;
 
-            // Apply defense reduction
-            int actualDamage = Mathf.Max(1, damage - (playerDefinition?.Defense ?? 0));
+            healthComponent.TakeDamage(damage, attacker);
             
-            playerData.CurrentHealth -= actualDamage;
+            // Update player data to match health component
+            playerData.CurrentHealth = healthComponent.CurrentHealth;
+        }
 
-            Debug.Log($"[PlayerController] Took {actualDamage} damage ({playerData.CurrentHealth} HP remaining)");
+        /// <summary>
+        /// Heal the player via HealthComponent.
+        /// </summary>
+        public void Heal(int amount)
+        {
+            if (!IsAlive || healthComponent == null)
+                return;
 
+            healthComponent.Heal(amount);
+            
+            // Update player data to match health component
+            playerData.CurrentHealth = healthComponent.CurrentHealth;
+        }
+
+        /// <summary>
+        /// Handles player death event from HealthComponent.
+        /// </summary>
+        private void OnPlayerDeath(GameObject killer)
+        {
+            Debug.Log($"[PlayerController] Player killed by {(killer != null ? killer.name : "unknown")}!");
+            
+            // Update player data
+            playerData.CurrentHealth = 0;
+            
             // Notify listeners
-            OnPlayerDamaged?.Invoke(actualDamage, playerData.CurrentHealth);
+            OnPlayerDied?.Invoke();
 
-            // Check for death
-            if (playerData.CurrentHealth <= 0)
+            // Clear cell occupancy
+            if (hexGrid != null)
             {
-                Die();
+                var currentCell = hexGrid.GetCell(CurrentPosition);
+                if (currentCell != null)
+                {
+                    currentCell.IsOccupied = false;
+                    currentCell.OccupyingEntity = null;
+                }
+            }
+
+            // TODO: Implement death behavior (respawn, game over screen, etc.)
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Logs a message to the combat panel in GridVisualizer.
+        /// </summary>
+        private void LogToCombatPanel(string message)
+        {
+            var gridVisualizer = FindFirstObjectByType<FollowMyFootsteps.Grid.GridVisualizer>();
+            if (gridVisualizer != null)
+            {
+                gridVisualizer.AddCombatLogEntry(message);
             }
         }
 
         /// <summary>
-        /// Heal the player.
+        /// Finds an NPC at the specified coordinate using EntityFactory.
         /// </summary>
-        public void Heal(int amount)
+        private NPCController FindNPCAtCoord(HexCoord coord)
         {
-            if (!IsAlive)
-                return;
+            if (entityFactory == null)
+            {
+                Debug.LogWarning("[PlayerController] EntityFactory reference not set, cannot find NPCs");
+                return null;
+            }
 
-            int maxHealth = playerDefinition?.MaxHealth ?? 100;
-            playerData.CurrentHealth = Mathf.Min(maxHealth, playerData.CurrentHealth + amount);
+            var allNPCs = entityFactory.GetAllActiveNPCs();
+            foreach (var npc in allNPCs)
+            {
+                if (npc != null && npc.RuntimeData != null && npc.RuntimeData.Position == coord)
+                {
+                    return npc;
+                }
+            }
 
-            Debug.Log($"[PlayerController] Healed {amount} HP ({playerData.CurrentHealth}/{maxHealth})");
-        }
-
-        /// <summary>
-        /// Handles player death.
-        /// </summary>
-        private void Die()
-        {
-            Debug.Log("[PlayerController] Player died!");
-            OnPlayerDied?.Invoke();
-
-            // TODO: Implement death behavior (respawn, game over, etc.)
+            return null;
         }
 
         #endregion

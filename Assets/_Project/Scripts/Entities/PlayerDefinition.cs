@@ -30,6 +30,11 @@ namespace FollowMyFootsteps.Entities
         private int attackDamage = 10;
 
         [SerializeField]
+        [Tooltip("Attack range in hexes (1 = melee)")]
+        [Range(1, 10)]
+        private int attackRange = 1;
+
+        [SerializeField]
         [Tooltip("Defense value (reduces incoming damage)")]
         private int defense = 5;
 
@@ -64,6 +69,7 @@ namespace FollowMyFootsteps.Entities
         public Sprite PlayerSprite => playerSprite;
         public int MaxHealth => maxHealth;
         public int AttackDamage => attackDamage;
+        public int AttackRange => attackRange;
         public int Defense => defense;
         public int MovementRange => movementRange;
         public float MovementSpeed => movementSpeed;
@@ -80,6 +86,7 @@ namespace FollowMyFootsteps.Entities
             // Ensure positive values
             maxHealth = Mathf.Max(1, maxHealth);
             attackDamage = Mathf.Max(0, attackDamage);
+            attackRange = Mathf.Clamp(attackRange, 1, 10);
             defense = Mathf.Max(0, defense);
             movementRange = Mathf.Max(1, movementRange);
             movementSpeed = Mathf.Max(0.1f, movementSpeed);

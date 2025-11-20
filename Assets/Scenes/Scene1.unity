@@ -171,6 +171,53 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &508884812
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 508884814}
+  - component: {fileID: 508884813}
+  m_Layer: 0
+  m_Name: DamagePopupPool
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &508884813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508884812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fd48299a34653749aa8701e62ea3938, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps::FollowMyFootsteps.Combat.DamagePopupPool
+  damagePopupPrefab: {fileID: 3344278621049872850, guid: ad24c594b02c31e4cab13d82f75c8393, type: 3}
+  initialPoolSize: 20
+  maxPoolSize: 50
+--- !u!4 &508884814
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508884812}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 14.22487, y: 2.98743, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &559298752
 GameObject:
   m_ObjectHideFlags: 0
@@ -398,6 +445,7 @@ GameObject:
   m_Component:
   - component: {fileID: 996890140}
   - component: {fileID: 996890139}
+  - component: {fileID: 996890141}
   m_Layer: 0
   m_Name: PlayerSpawner
   m_TagString: Untagged
@@ -423,6 +471,7 @@ MonoBehaviour:
     r: 10
   autoSpawn: 1
   hexGrid: {fileID: 0}
+  entityFactory: {fileID: 0}
 --- !u!4 &996890140
 Transform:
   m_ObjectHideFlags: 0
@@ -438,6 +487,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &996890141
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 996890138}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f09bdfb22338f224f81674c1150db723, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FollowMyFootsteps::FollowMyFootsteps.Entities.EntityFactory
+  initialPoolSize: 20
+  maxPoolSize: 100
+  hexGrid: {fileID: 0}
 --- !u!1 &1060154635
 GameObject:
   m_ObjectHideFlags: 0
@@ -532,6 +596,7 @@ MonoBehaviour:
   showCoordinates: 1
   showCellStates: 1
   highlightHover: 1
+  showHoveredCellInfo: 1
   hoverColor: {r: 1, g: 1, b: 0, a: 0.3}
   nonWalkableColor: {r: 1, g: 0, b: 0, a: 0.3}
   occupiedColor: {r: 0, g: 0, b: 1, a: 0.3}
@@ -758,3 +823,4 @@ SceneRoots:
   - {fileID: 2080132667}
   - {fileID: 1060154637}
   - {fileID: 735170147}
+  - {fileID: 508884814}

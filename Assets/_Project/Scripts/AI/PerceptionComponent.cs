@@ -188,7 +188,7 @@ namespace FollowMyFootsteps.AI
         /// <summary>
         /// Get the closest visible target
         /// </summary>
-        private GameObject GetClosestTarget()
+        public GameObject GetClosestTarget()
         {
             if (visibleTargets.Count == 0)
                 return null;

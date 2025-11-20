@@ -271,6 +271,17 @@ namespace FollowMyFootsteps.Grid
         }
 
         /// <summary>
+        /// Gets the cell located at the provided world position.
+        /// </summary>
+        /// <param name="worldPosition">World position to translate into a hex cell lookup.</param>
+        /// <returns>The matching <see cref="HexCell"/> if it exists in a loaded chunk; otherwise null.</returns>
+        public HexCell GetCellAtWorldPosition(Vector3 worldPosition)
+        {
+            HexCoord coord = HexMetrics.WorldToHexCoord(worldPosition);
+            return GetCell(coord);
+        }
+
+        /// <summary>
         /// Gets all neighbors of the specified hex coordinate.
         /// </summary>
         public List<HexCell> GetNeighbors(HexCoord coord)

@@ -77,6 +77,13 @@ namespace FollowMyFootsteps.Core
             Debug.Log("[SimulationManager] Initializing turn-based simulation");
             ChangeState(SimulationState.PlayerTurn);
             
+            // Subscribe to end turn input
+            var inputManager = FollowMyFootsteps.Input.InputManager.Instance;
+            if (inputManager != null)
+            {
+                inputManager.OnEndTurnRequested += OnEndTurnInput;
+            }
+            
             // Notify any already-registered entities that the first turn has started
             ITurnEntity player = GetPlayerEntity();
             if (player != null)
@@ -84,6 +91,32 @@ namespace FollowMyFootsteps.Core
                 player.OnTurnStart();
                 onTurnStart?.Raise(new TurnEventData(currentTurnNumber, currentState, player));
                 Debug.Log($"[SimulationManager] Player turn started - AP should be {player.ActionPoints}/{player.MaxActionPoints}");
+            }
+        }
+        
+        private void OnDestroy()
+        {
+            // Unsubscribe from input events
+            var inputManager = FollowMyFootsteps.Input.InputManager.Instance;
+            if (inputManager != null)
+            {
+                inputManager.OnEndTurnRequested -= OnEndTurnInput;
+            }
+        }
+        
+        /// <summary>
+        /// Handles end turn input from player (Space key).
+        /// </summary>
+        private void OnEndTurnInput()
+        {
+            if (currentState == SimulationState.PlayerTurn)
+            {
+                Debug.Log("[SimulationManager] Player ended turn via Space key");
+                EndPlayerTurn();
+            }
+            else
+            {
+                Debug.Log($"[SimulationManager] Cannot end turn - current state: {currentState}");
             }
         }
 
@@ -292,7 +325,13 @@ namespace FollowMyFootsteps.Core
             if (player != null)
             {
                 info += $"Player AP: {player.ActionPoints}/{player.MaxActionPoints}\n";
-                info += $"Player Active: {player.IsActive}";
+                info += $"Player Active: {player.IsActive}\n\n";
+                
+                // Add turn control hint
+                if (currentState == SimulationState.PlayerTurn)
+                {
+                    info += "[SPACE] End Turn";
+                }
             }
             else
             {

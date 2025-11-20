@@ -193,11 +193,11 @@ namespace FollowMyFootsteps.Grid
         {
             if (!OccupyingEntity.HasValue)
             {
-                return "No entity present.";
+                return string.Empty; // Return empty string instead of message
             }
 
             HexOccupantInfo info = OccupyingEntity.Value;
-            return $"Name: {info.Name}\nHealth: {info.CurrentHealth}/{info.MaxHealth}\nType: {info.Type}";
+            return $"{info.Name}\nHealth: {info.CurrentHealth}/{info.MaxHealth}\nType: {info.Type}";
         }
 
         #endregion

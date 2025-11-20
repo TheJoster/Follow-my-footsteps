@@ -26,6 +26,10 @@ namespace FollowMyFootsteps.Grid
         [Tooltip("Highlight hovered cell")]
         private bool highlightHover = true;
 
+        [SerializeField]
+        [Tooltip("Show hovered cell info panel")]
+        private bool showHoveredCellInfo = true;
+
         [Header("Visual Settings")]
         [SerializeField]
         [Tooltip("Color for hover highlight")]
@@ -72,7 +76,7 @@ namespace FollowMyFootsteps.Grid
 
         [SerializeField]
         [Tooltip("Size of the info panel")]
-        private Vector2 infoPanelSize = new Vector2(250, 180);
+        private Vector2 infoPanelSize = new Vector2(300, 320);
 
         public enum InfoPanelPosition
         {
@@ -92,6 +96,15 @@ namespace FollowMyFootsteps.Grid
         private UnityEngine.Camera mainCamera;
         private GameObject hoverIndicator;
         private SpriteRenderer hoverSpriteRenderer;
+        
+        // Right-click debug tracking
+        private HexCoord? lastRightClickedCoord;
+        private float lastRightClickTime;
+        private string lastRightClickResult = "None";
+        
+        // Combat log tracking
+        private System.Collections.Generic.Queue<string> combatLog = new System.Collections.Generic.Queue<string>();
+        private const int maxCombatLogEntries = 2;
 
         #endregion
 
@@ -104,12 +117,29 @@ namespace FollowMyFootsteps.Grid
             
             // Create hover indicator sprite
             CreateHoverIndicator();
+            
+            // Subscribe to right-click events for debugging
+            var inputManager = FollowMyFootsteps.Input.InputManager.Instance;
+            if (inputManager != null)
+            {
+                inputManager.OnHexRightClicked += OnRightClickDebug;
+            }
         }
 
         private void Start()
         {
             // Add some test cells with different states for visualization testing
             StartCoroutine(SetupTestCells());
+        }
+        
+        private void OnDestroy()
+        {
+            // Unsubscribe from right-click events
+            var inputManager = FollowMyFootsteps.Input.InputManager.Instance;
+            if (inputManager != null)
+            {
+                inputManager.OnHexRightClicked -= OnRightClickDebug;
+            }
         }
 
         private System.Collections.IEnumerator SetupTestCells()
@@ -171,6 +201,40 @@ namespace FollowMyFootsteps.Grid
             }
 
             Debug.Log("✓ All 3 test patterns created successfully");
+        }
+        
+        /// <summary>
+        /// Tracks right-click events for debug panel.
+        /// </summary>
+        private void OnRightClickDebug(HexCoord coord)
+        {
+            lastRightClickedCoord = coord;
+            lastRightClickTime = Time.time;
+            
+            // Check what's at this position
+            var cell = hexGrid?.GetCell(coord);
+            if (cell == null)
+            {
+                lastRightClickResult = "Cell not found";
+            }
+            else if (!cell.IsOccupied)
+            {
+                lastRightClickResult = "Empty cell";
+            }
+            else
+            {
+                string occupantInfo = cell.GetOccupyingEntityDetails();
+                if (string.IsNullOrEmpty(occupantInfo))
+                {
+                    lastRightClickResult = "Occupied (no entity data)";
+                }
+                else
+                {
+                    lastRightClickResult = $"Target: {cell.OccupyingEntity?.Name ?? "Unknown"}";
+                }
+            }
+            
+            Debug.Log($"[GridVisualizer] Right-click at {coord}: {lastRightClickResult}");
         }
 
         /// <summary>
@@ -429,23 +493,22 @@ namespace FollowMyFootsteps.Grid
 
             Vector3 inputPosition = inputManager.GetInputPosition();
 
-            // Detect hovered cell using the unified input position (mouse or touch)
-            Ray ray = mainCamera.ScreenPointToRay(inputPosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
+            // Convert screen position to world position for 2D
+            Vector3 worldPosition = mainCamera.ScreenToWorldPoint(inputPosition);
+            worldPosition.z = 0f; // Ensure Z is 0 for 2D
+
+            // Get the cell at the world position
+            hoveredCell = hexGrid.GetCellAtWorldPosition(worldPosition);
+
+            if (hoveredCell == null)
             {
-                hoveredCell = hexGrid.GetCellAtWorldPosition(hit.point);
-
-                if (hoveredCell == null)
+                if (hoverIndicator != null && hoverIndicator.activeSelf)
                 {
-                    if (hoverIndicator != null && hoverIndicator.activeSelf)
-                    {
-                        hoverIndicator.SetActive(false);
-                    }
-
-                    HideTooltip();
-                    return;
+                    hoverIndicator.SetActive(false);
                 }
-
+            }
+            else
+            {
                 if (highlightHover)
                 {
                     UpdateHoverIndicator();
@@ -454,19 +517,6 @@ namespace FollowMyFootsteps.Grid
                 {
                     hoverIndicator.SetActive(false);
                 }
-
-                UpdateTooltip();
-            }
-            else
-            {
-                hoveredCell = null;
-
-                if (hoverIndicator != null && hoverIndicator.activeSelf)
-                {
-                    hoverIndicator.SetActive(false);
-                }
-
-                HideTooltip();
             }
         }
 
@@ -494,7 +544,7 @@ namespace FollowMyFootsteps.Grid
                 DrawCoordinateLabels();
             }
 
-            if (hoveredCell != null)
+            if (showHoveredCellInfo)
             {
                 DrawHoveredCellInfo();
             }
@@ -520,31 +570,6 @@ namespace FollowMyFootsteps.Grid
                 // Hide indicator when not hovering over a cell
                 hoverIndicator.SetActive(false);
             }
-        }
-
-        private void UpdateTooltip()
-        {
-            if (hoveredCell != null && hoveredCell.IsOccupied)
-            {
-                string details = hoveredCell.GetOccupyingEntityDetails();
-                Vector3 pointerScreenPos = UnityEngine.Input.mousePosition;
-                var inputManager = InputManager.Instance;
-                if (inputManager != null)
-                {
-                    pointerScreenPos = inputManager.GetInputPosition();
-                }
-
-                TooltipUI.Instance.Show(details, pointerScreenPos);
-            }
-            else
-            {
-                HideTooltip();
-            }
-        }
-
-        private void HideTooltip()
-        {
-            TooltipUI.Instance.Hide();
         }
 
         #endregion
@@ -675,56 +700,122 @@ namespace FollowMyFootsteps.Grid
         /// </summary>
         private void DrawHoveredCellInfo()
         {
-            if (hoveredCell == null) return;
-
-            // Draw info box with configurable position
+            // Setup GUI style once
             GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
             boxStyle.alignment = TextAnchor.UpperLeft;
             boxStyle.normal.textColor = Color.white;
-            boxStyle.fontSize = 12;
+            boxStyle.fontSize = 14;
+            boxStyle.padding = new RectOffset(10, 10, 10, 10);
+            boxStyle.normal.background = MakeTex(2, 2, new Color(0f, 0f, 0f, 0.8f));
 
-            // Get terrain name from TerrainType ScriptableObject
-            string terrainName = hoveredCell.Terrain != null 
-                ? hoveredCell.Terrain.TerrainName 
-                : "None";
+            string info;
 
-            string info = $"Hovered Cell Info\n" +
-                          $"Coord: ({hoveredCell.Coordinates.q}, {hoveredCell.Coordinates.r})\n" +
-                          $"Terrain: {terrainName}\n" +
-                          $"Walkable: {hoveredCell.IsWalkable}\n" +
-                          $"Occupied: {hoveredCell.IsOccupied}\n" +
-                          $"Movement Cost: {hoveredCell.GetMovementCost()}";
-
-            // Add pathfinding information from player position
-            var player = FindFirstObjectByType<FollowMyFootsteps.Entities.PlayerController>();
-            if (player != null && hexGrid != null)
+            if (hoveredCell == null)
             {
-                var path = Pathfinding.FindPath(
-                    hexGrid, 
-                    player.CurrentPosition, 
-                    hoveredCell.Coordinates, 
-                    30 // search limit
-                );
+                // Show empty panel when not hovering
+                info = "Hovered Cell Info\nNo cell hovered\n(Hover over hex to see details)";
+            }
+            else
+            {
+                // Get terrain name from TerrainType ScriptableObject
+                string terrainName = hoveredCell.Terrain != null 
+                    ? hoveredCell.Terrain.TerrainName 
+                    : "None";
 
-                if (path != null && path.Count > 0)
+                info = $"Hovered Cell Info\n" +
+                       $"Coord: ({hoveredCell.Coordinates.q}, {hoveredCell.Coordinates.r})\n" +
+                       $"Terrain: {terrainName}\n" +
+                       $"Walkable: {hoveredCell.IsWalkable}\n" +
+                       $"Occupied: {hoveredCell.IsOccupied}\n" +
+                       $"Movement Cost: {hoveredCell.GetMovementCost()}";
+
+                // Add occupant details if cell is occupied
+                if (hoveredCell.IsOccupied)
                 {
-                    int pathCost = Pathfinding.GetPathCost(hexGrid, path);
-                    int turnsRequired = Mathf.CeilToInt((float)pathCost / 3f); // 3 AP per turn
-                    
-                    info += $"\n--- Pathfinding ---";
-                    info += $"\nDistance: {path.Count} cells";
-                    info += $"\nPath Cost: {pathCost}";
-                    info += $"\nTurns Required: {turnsRequired}";
+                    string occupantDetails = hoveredCell.GetOccupyingEntityDetails();
+                    if (!string.IsNullOrEmpty(occupantDetails))
+                    {
+                        info += $"\n--- Occupant ---\n{occupantDetails}";
+                    }
+                    else
+                    {
+                        info += $"\n--- Occupant ---\nCell marked occupied but no details available";
+                    }
                 }
-                else
+
+                // Add pathfinding information from player position
+                var player = FindFirstObjectByType<FollowMyFootsteps.Entities.PlayerController>();
+                if (player != null && hexGrid != null)
                 {
-                    info += $"\n--- Pathfinding ---";
-                    info += $"\nUnreachable!";
+                    var path = Pathfinding.FindPath(
+                        hexGrid, 
+                        player.CurrentPosition, 
+                        hoveredCell.Coordinates, 
+                        30 // search limit
+                    );
+
+                    if (path != null && path.Count > 0)
+                    {
+                        int pathCost = Pathfinding.GetPathCost(hexGrid, path);
+                        int turnsRequired = Mathf.CeilToInt((float)pathCost / 3f); // 3 AP per turn
+                        
+                        info += $"\n--- Pathfinding ---";
+                        info += $"\nDistance: {path.Count} cells";
+                        info += $"\nPath Cost: {pathCost}";
+                        info += $"\nTurns Required: {turnsRequired}";
+                    }
+                    else
+                    {
+                        info += $"\n--- Pathfinding ---";
+                        info += $"\nUnreachable!";
+                    }
+                }
+            }
+            
+            // Add right-click debug info
+            info += $"\n\n--- Last Right-Click ---";
+            if (lastRightClickedCoord.HasValue)
+            {
+                float timeSinceClick = Time.time - lastRightClickTime;
+                info += $"\nCoord: {lastRightClickedCoord.Value}";
+                info += $"\nResult: {lastRightClickResult}";
+                info += $"\nTime: {timeSinceClick:F1}s ago";
+            }
+            else
+            {
+                info += $"\nNo right-clicks yet";
+                info += $"\n(Try right-clicking!)";
+            }
+            
+            // Add combat log
+            if (combatLog.Count > 0)
+            {
+                info += $"\n\n--- Combat Log ---";
+                foreach (string logEntry in combatLog)
+                {
+                    info += $"\n{logEntry}";
                 }
             }
 
             Rect panelRect = CalculateInfoPanelRect();
+            
+            // Calculate actual content height dynamically
+            GUIContent content = new GUIContent(info);
+            float contentHeight = boxStyle.CalcHeight(content, panelRect.width);
+            panelRect.height = Mathf.Max(contentHeight + 20, 100); // Min 100px, add 20px padding
+            
             GUI.Box(panelRect, info, boxStyle);
+        }
+
+        private Texture2D MakeTex(int width, int height, Color col)
+        {
+            Color[] pix = new Color[width * height];
+            for (int i = 0; i < pix.Length; i++)
+                pix[i] = col;
+            Texture2D result = new Texture2D(width, height);
+            result.SetPixels(pix);
+            result.Apply();
+            return result;
         }
 
         private Rect CalculateInfoPanelRect()
@@ -767,6 +858,26 @@ namespace FollowMyFootsteps.Grid
         #endregion
 
         #region Public Methods
+
+        /// <summary>
+        /// Adds a message to the combat log displayed in the debug panel.
+        /// </summary>
+        public void AddCombatLogEntry(string message)
+        {
+            combatLog.Enqueue(message);
+            if (combatLog.Count > maxCombatLogEntries)
+            {
+                combatLog.Dequeue();
+            }
+        }
+        
+        /// <summary>
+        /// Clears the combat log.
+        /// </summary>
+        public void ClearCombatLog()
+        {
+            combatLog.Clear();
+        }
 
         /// <summary>
         /// Toggles coordinate display.

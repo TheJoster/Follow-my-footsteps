@@ -49,6 +49,15 @@ namespace FollowMyFootsteps.Entities
         [Range(1, 20)]
         public int MovementRange = 5;
 
+        [Header("Combat")]
+        [Tooltip("Base attack damage")]
+        [Range(1, 100)]
+        public int AttackDamage = 10;
+        
+        [Tooltip("Attack range in hex cells (1 = melee, 2+ = ranged)")]
+        [Range(1, 10)]
+        public int AttackRange = 1;
+
         [Header("Behavior")]
         [Tooltip("Type of NPC (affects initial state and interactions)")]
         public NPCType Type = NPCType.Neutral;
