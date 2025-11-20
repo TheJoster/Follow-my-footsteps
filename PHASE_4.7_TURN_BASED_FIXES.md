@@ -91,12 +91,40 @@ private void Update()
 - NPCs could move unlimited distances across entire map in one turn
 - `ConsumeActionPoints()` method existed but was never called
 
-**Fix**:
+**Fix (Initial - Caused Issue 4)**:
 - Added AP consumption to WanderState and PatrolState
 - Each hex cell in path costs **1 AP**
-- States validate NPC has enough AP before moving
+- States validated NPC had enough AP for FULL path before moving
 - Movement skipped if insufficient AP
 - AP properly consumed when path received
+
+**Files Modified**:
+- `Assets/_Project/Scripts/AI/WanderState.cs`
+- `Assets/_Project/Scripts/AI/PatrolState.cs`
+
+---
+
+### Issue 4: NPCs Stopped Moving After AP Implementation (Overly Strict Validation)
+
+**User Report**: "Since the last update the NPC as no longer visually moving (not in play or build mode)"
+
+**Root Cause**:
+- Initial AP implementation required NPCs to have enough AP for **entire path to destination**
+- Villager has 2 AP but wanders in 5 hex radius → paths often 4-5 cells
+- Guard/Goblin have 3 AP but patrol waypoints 10+ hexes apart
+- Check: `if (ActionPoints < pathCost) { return; }` blocked ALL movement
+- NPCs never moved because paths always exceeded available AP
+
+**Design Flaw**:
+- "All or nothing" approach doesn't match turn-based game design
+- NPCs should move as far as they can with available AP, not require full path completion
+- Multi-turn journeys are standard in turn-based games
+
+**Fix - Partial Path Following**:
+- Truncate paths to available AP: `Mathf.Min(path.Count, ActionPoints)`
+- NPCs move as far as their AP allows each turn
+- Continue toward same goal over multiple turns
+- Consume AP only for truncated portion
 
 **Implementation**:
 
@@ -107,30 +135,36 @@ private void OnPathReceived(List<HexCoord> path, NPCController npc, MovementCont
     
     if (path != null && path.Count > 0)
     {
-        // Calculate AP cost (1 AP per hex cell)
-        int pathCost = path.Count;
+        // Truncate path to available AP (partial path following)
+        int maxSteps = Mathf.Min(path.Count, npc.ActionPoints);
+        List<HexCoord> truncatedPath = path.GetRange(0, maxSteps);
         
-        // Check if NPC has enough AP for the full path
-        if (npc.ActionPoints < pathCost)
+        // Consume AP only for the truncated path
+        if (!npc.ConsumeActionPoints(maxSteps))
         {
-            Debug.LogWarning($"Insufficient AP. Has {npc.ActionPoints}, needs {pathCost}");
+            Debug.LogWarning($"Failed to consume {maxSteps} AP");
             isMovingToTarget = false;
             return;
         }
         
-        // Consume AP for the movement
-        if (!npc.ConsumeActionPoints(pathCost))
-        {
-            Debug.LogWarning($"Failed to consume {pathCost} AP");
-            isMovingToTarget = false;
-            return;
-        }
-        
+        Debug.Log($"Moving {maxSteps}/{path.Count} steps toward target. {npc.ActionPoints} AP remaining");
         isMovingToTarget = true;
-        movement.FollowPath(path);
+        movement.FollowPath(truncatedPath);
+        
+        // Keep same target if we didn't reach it (will continue next turn)
+        if (maxSteps < path.Count)
+        {
+            Debug.Log($"Making partial progress, {path.Count - maxSteps} steps remaining");
+        }
     }
 }
 ```
+
+**Result**:
+- Villager moves 2 hexes/turn toward wander targets (multi-turn journeys)
+- Guard/Goblin move 3 hexes/turn toward patrol waypoints
+- NPCs make steady progress toward distant goals
+- Standard turn-based movement behavior restored
 
 **Files Modified**:
 - `Assets/_Project/Scripts/AI/WanderState.cs`
@@ -263,6 +297,19 @@ private void OnPathReceived(List<HexCoord> path, NPCController npc, MovementCont
    - NPCs validate AP before moving
    - Fixes unlimited movement distance issue
 
+6. **test: fix unit tests for updated debug log formats**
+   - Updated MovementController tests to match new log format
+   - Updated PathfindingManager test to expect error log for null grid
+   - Tests now use regex patterns to match enhanced debug messages
+   - Fixes 3 failing tests
+
+7. **fix: implement partial path following for NPCs with limited AP**
+   - NPCs now truncate paths to available AP (multi-turn journeys)
+   - Villager moves 2 hexes/turn toward wander targets
+   - Guard/Goblin move 3 hexes/turn toward patrol waypoints
+   - Fixes overly strict AP validation that prevented all movement
+   - NPCs continue toward same goal over multiple turns
+
 ---
 
 ## Future Action Point System (Phase 5+)
@@ -381,12 +428,12 @@ With 3 AP, an NPC can:
 
 ## Stats
 
-- **Files Modified**: 8
-- **Lines Changed**: ~150 additions, ~100 deletions
-- **Bugs Fixed**: 3 critical issues
-- **Commits**: 5
-- **Development Time**: ~2 hours
-- **Testing Time**: ~30 minutes
+- **Files Modified**: 11
+- **Lines Changed**: ~200 additions, ~120 deletions
+- **Bugs Fixed**: 4 critical issues
+- **Commits**: 7
+- **Development Time**: ~3 hours
+- **Testing Time**: ~45 minutes
 
 ---
 

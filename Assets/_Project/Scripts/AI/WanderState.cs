@@ -115,29 +115,28 @@ namespace FollowMyFootsteps.AI
             
             if (path != null && path.Count > 0)
             {
-                // Calculate AP cost (1 AP per hex cell)
-                int pathCost = path.Count;
+                // Truncate path to available AP (partial path following)
+                int maxSteps = Mathf.Min(path.Count, npc.ActionPoints);
+                List<HexCoord> truncatedPath = path.GetRange(0, maxSteps);
                 
-                // Check if NPC has enough AP for the full path
-                if (npc.ActionPoints < pathCost)
+                // Consume AP only for the truncated path
+                if (!npc.ConsumeActionPoints(maxSteps))
                 {
-                    Debug.LogWarning($"[WanderState] {npc.EntityName} insufficient AP for path. Has {npc.ActionPoints}, needs {pathCost}. Skipping movement.");
+                    Debug.LogWarning($"[WanderState] {npc.EntityName} failed to consume {maxSteps} AP");
                     isMovingToTarget = false;
                     return;
                 }
                 
-                // Consume AP for the movement
-                if (!npc.ConsumeActionPoints(pathCost))
-                {
-                    Debug.LogWarning($"[WanderState] {npc.EntityName} failed to consume {pathCost} AP");
-                    isMovingToTarget = false;
-                    return;
-                }
-                
-                Debug.Log($"[WanderState] {npc.EntityName} received path with {path.Count} steps, consumed {pathCost} AP. Remaining: {npc.ActionPoints}");
+                Debug.Log($"[WanderState] {npc.EntityName} moving {maxSteps}/{path.Count} steps toward {targetPosition}. {npc.ActionPoints} AP remaining");
                 isMovingToTarget = true;
-                bool success = movement.FollowPath(path);
+                bool success = movement.FollowPath(truncatedPath);
                 Debug.Log($"[WanderState] FollowPath returned: {success}");
+                
+                // Keep same target if we didn't reach it (will continue next turn)
+                if (maxSteps < path.Count)
+                {
+                    Debug.Log($"[WanderState] {npc.EntityName} making partial progress, {path.Count - maxSteps} steps remaining");
+                }
             }
             else
             {
