@@ -161,6 +161,13 @@ namespace FollowMyFootsteps.Entities
 
             // Mark cell as occupied
             cell.IsOccupied = true;
+            cell.OccupyingEntity = new HexCell.HexOccupantInfo
+            {
+                Name = definition.NPCName,
+                CurrentHealth = npcController.RuntimeData != null ? npcController.RuntimeData.CurrentHealth : definition.MaxHealth,
+                MaxHealth = definition.MaxHealth,
+                Type = definition.Type.ToString()
+            };
 
             // Register as active
             activeNPCs[entityId] = npcObject;
@@ -211,6 +218,7 @@ namespace FollowMyFootsteps.Entities
                     if (cell != null)
                     {
                         cell.IsOccupied = false;
+                        cell.OccupyingEntity = null;
                     }
                 }
             }

@@ -200,6 +200,14 @@ namespace FollowMyFootsteps.Input
         }
 
         /// <summary>
+        /// Gets the current input position (mouse or touch) in screen space.
+        /// </summary>
+        public Vector3 GetInputPosition()
+        {
+            return inputProvider?.GetInputPosition() ?? Vector3.zero;
+        }
+
+        /// <summary>
         /// Checks if drag is currently active.
         /// </summary>
         public bool IsDragActive()

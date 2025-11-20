@@ -38,6 +38,7 @@ namespace FollowMyFootsteps.Input
             if (mainCamera == null)
                 return null;
 
+            lastTouchPosition = touch.position;
             return mainCamera.ScreenToWorldPoint(touch.position);
         }
 
@@ -133,11 +134,40 @@ namespace FollowMyFootsteps.Input
         {
             if (UnityEngine.Input.touchCount > 0)
             {
-                return UnityEngine.Input.GetTouch(0).position;
+                Touch touch = UnityEngine.Input.GetTouch(0);
+                lastTouchPosition = touch.position;
+                return lastTouchPosition;
             }
 
             // Fallback to mouse position if no touches (for editor testing)
-            return UnityEngine.Input.mousePosition;
+            Vector3 mousePos = UnityEngine.Input.mousePosition;
+            if (mousePos != Vector3.zero)
+            {
+                lastTouchPosition = new Vector2(mousePos.x, mousePos.y);
+            }
+
+            return lastTouchPosition;
+        }
+
+        /// <inheritdoc/>
+        public Vector3 GetInputPosition()
+        {
+            if (UnityEngine.Input.touchCount > 0)
+            {
+                Touch touch = UnityEngine.Input.GetTouch(0);
+                lastTouchPosition = touch.position;
+                return new Vector3(lastTouchPosition.x, lastTouchPosition.y, 0f);
+            }
+
+            Vector3 mousePos = UnityEngine.Input.mousePosition;
+            if (mousePos != Vector3.zero)
+            {
+                lastTouchPosition = new Vector2(mousePos.x, mousePos.y);
+                return mousePos;
+            }
+
+            // Fallback to last known position when no active touch is present (e.g., between taps)
+            return new Vector3(lastTouchPosition.x, lastTouchPosition.y, 0f);
         }
     }
 }

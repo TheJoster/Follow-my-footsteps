@@ -49,5 +49,11 @@ namespace FollowMyFootsteps.Input
         /// </summary>
         /// <returns>Screen position in pixels.</returns>
         Vector2 GetPointerPosition();
+
+        /// <summary>
+        /// Gets the current input position (mouse or touch).
+        /// </summary>
+        /// <returns>Screen-space position of the input.</returns>
+        Vector3 GetInputPosition();
     }
 }

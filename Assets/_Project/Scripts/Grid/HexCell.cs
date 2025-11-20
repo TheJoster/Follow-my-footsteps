@@ -167,5 +167,39 @@ namespace FollowMyFootsteps.Grid
         }
 
         #endregion
+
+        #region Occupying Entity
+
+        /// <summary>
+        /// Lightweight snapshot of the entity occupying this cell for tooltip display.
+        /// </summary>
+        public struct HexOccupantInfo
+        {
+            public string Name;
+            public int CurrentHealth;
+            public int MaxHealth;
+            public string Type;
+        }
+
+        /// <summary>
+        /// Populated when an entity occupies this cell; cleared when the cell becomes vacant.
+        /// </summary>
+        public HexOccupantInfo? OccupyingEntity { get; set; }
+
+        /// <summary>
+        /// Retrieves details about the occupying entity (if any).
+        /// </summary>
+        public string GetOccupyingEntityDetails()
+        {
+            if (!OccupyingEntity.HasValue)
+            {
+                return "No entity present.";
+            }
+
+            HexOccupantInfo info = OccupyingEntity.Value;
+            return $"Name: {info.Name}\nHealth: {info.CurrentHealth}/{info.MaxHealth}\nType: {info.Type}";
+        }
+
+        #endregion
     }
 }

@@ -123,6 +123,36 @@ namespace FollowMyFootsteps.Tests.EditMode
             Assert.IsTrue(cell.IsWalkable); // Should still be walkable
         }
 
+        [Test]
+        public void OccupyingEntityDetails_ReturnsFormattedSnapshot()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            var occupant = new HexCell.HexOccupantInfo
+            {
+                Name = "Test NPC",
+                CurrentHealth = 8,
+                MaxHealth = 10,
+                Type = "Friendly"
+            };
+
+            cell.OccupyingEntity = occupant;
+
+            string expected = "Name: Test NPC\nHealth: 8/10\nType: Friendly";
+            Assert.AreEqual(expected, cell.GetOccupyingEntityDetails());
+        }
+
+        [Test]
+        public void OccupyingEntityDetails_ReturnsFallbackWhenNoOccupant()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+
+            Assert.AreEqual("No entity present.", cell.GetOccupyingEntityDetails());
+
+            cell.OccupyingEntity = null;
+
+            Assert.AreEqual("No entity present.", cell.GetOccupyingEntityDetails());
+        }
+
         #endregion
 
         #region Movement Cost Tests

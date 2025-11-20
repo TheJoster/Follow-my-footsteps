@@ -33,7 +33,7 @@
 | **Rendering** | Universal Render Pipeline (URP) 2D | Mobile-optimized graphics pipeline |
 | **Grid System** | Axial Hex Coordinates | Pointy-top hexes with chunk-based streaming (16×16 cells) |
 | **Pathfinding** | A* Algorithm | Async processing with terrain cost calculation and caching |
-| **Input** | Cross-Platform Abstraction | Unified PC/mobile input handling (hover, click, tap, drag) |
+| **Input** | Cross-Platform Abstraction | PC hover + mobile tap-to-preview/tap-to-confirm with drag gestures |
 | **Camera** | Custom HexCameraController | Smooth follow, edge pan, WASD, zoom, grid boundaries |
 | **Path Visualization** | Dual PathVisualizer System | Committed (solid) + preview (semi-transparent) paths |
 | **Turn System** | SimulationManager Singleton | Turn-based cycle with action points, ITurnEntity interface, event-driven |
@@ -49,6 +49,13 @@
 - **Event-Driven Architecture**: ScriptableObject events for decoupled system communication
 - **Turn-Based Simulation**: Player turn → NPC processing → environmental updates cycle
 - **LOD System**: Distant NPCs update less frequently to maintain 60 FPS with 50+ entities
+
+## 🖥️ Platform Support
+
+- Windows 10/11 x64 with DirectX 11 GPU and 8 GB RAM baseline; build through `File → Build Settings → Windows`.
+- Android (API 26 min, API 34 target) using IL2CPP ARM64; toolchain: SDK Platform 34, Build Tools 34.0.0, NDK r23c (23.2.8568313), bundled OpenJDK 17.
+- Interaction model: PC = hover preview + click confirm; Mobile = tap-to-preview then tap-to-confirm, two-finger pan, pinch-to-zoom.
+- See `SETUP_ANDROID.md` for the complete Android installation, keystore, and deployment checklist.
 
 ---
 

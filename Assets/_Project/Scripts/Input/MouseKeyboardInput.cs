@@ -34,6 +34,7 @@ namespace FollowMyFootsteps.Input
                 return null;
 
             Vector3 screenPos = UnityEngine.Input.mousePosition;
+            lastMousePosition = new Vector2(screenPos.x, screenPos.y);
             return mainCamera.ScreenToWorldPoint(screenPos);
         }
 
@@ -96,7 +97,27 @@ namespace FollowMyFootsteps.Input
         /// <inheritdoc/>
         public Vector2 GetPointerPosition()
         {
-            return UnityEngine.Input.mousePosition;
+            Vector3 mousePos = UnityEngine.Input.mousePosition;
+            if (mousePos != Vector3.zero)
+            {
+                lastMousePosition = new Vector2(mousePos.x, mousePos.y);
+            }
+
+            return lastMousePosition;
+        }
+
+        /// <inheritdoc/>
+        public Vector3 GetInputPosition()
+        {
+            Vector3 mousePos = UnityEngine.Input.mousePosition;
+            if (mousePos != Vector3.zero)
+            {
+                lastMousePosition = new Vector2(mousePos.x, mousePos.y);
+                return mousePos;
+            }
+
+            // Fall back to the most recent cursor position when no hardware pointer is active (e.g., Editor touch simulation)
+            return new Vector3(lastMousePosition.x, lastMousePosition.y, 0f);
         }
     }
 }

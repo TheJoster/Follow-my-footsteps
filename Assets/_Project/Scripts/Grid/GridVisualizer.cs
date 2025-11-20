@@ -1,4 +1,5 @@
 using System.Collections;
+using FollowMyFootsteps.Input;
 using UnityEngine;
 
 namespace FollowMyFootsteps.Grid
@@ -419,10 +420,53 @@ namespace FollowMyFootsteps.Grid
 
         private void Update()
         {
-            if (highlightHover)
+            if (mainCamera == null || hexGrid == null)
+                return;
+
+            var inputManager = InputManager.Instance;
+            if (inputManager == null)
+                return;
+
+            Vector3 inputPosition = inputManager.GetInputPosition();
+
+            // Detect hovered cell using the unified input position (mouse or touch)
+            Ray ray = mainCamera.ScreenPointToRay(inputPosition);
+            if (Physics.Raycast(ray, out RaycastHit hit))
             {
-                UpdateHoveredCell();
-                UpdateHoverIndicator();
+                hoveredCell = hexGrid.GetCellAtWorldPosition(hit.point);
+
+                if (hoveredCell == null)
+                {
+                    if (hoverIndicator != null && hoverIndicator.activeSelf)
+                    {
+                        hoverIndicator.SetActive(false);
+                    }
+
+                    HideTooltip();
+                    return;
+                }
+
+                if (highlightHover)
+                {
+                    UpdateHoverIndicator();
+                }
+                else if (hoverIndicator != null && hoverIndicator.activeSelf)
+                {
+                    hoverIndicator.SetActive(false);
+                }
+
+                UpdateTooltip();
+            }
+            else
+            {
+                hoveredCell = null;
+
+                if (hoverIndicator != null && hoverIndicator.activeSelf)
+                {
+                    hoverIndicator.SetActive(false);
+                }
+
+                HideTooltip();
             }
         }
 
@@ -430,13 +474,11 @@ namespace FollowMyFootsteps.Grid
         {
             if (!Application.isPlaying || hexGrid == null) return;
 
-            // Draw cell state visualizations
             if (showCellStates)
             {
                 DrawCellStates();
             }
 
-            // Draw hovered cell
             if (highlightHover && hoveredCell != null)
             {
                 DrawHexGizmo(hoveredCell.Coordinates, hoverColor);
@@ -447,39 +489,15 @@ namespace FollowMyFootsteps.Grid
         {
             if (!Application.isPlaying || hexGrid == null) return;
 
-            // Draw coordinate labels
             if (showCoordinates)
             {
                 DrawCoordinateLabels();
             }
 
-            // Draw hovered cell info
             if (hoveredCell != null)
             {
                 DrawHoveredCellInfo();
             }
-        }
-
-        #endregion
-
-        #region Hover Detection
-
-        /// <summary>
-        /// Updates the currently hovered cell based on mouse position.
-        /// </summary>
-        private void UpdateHoveredCell()
-        {
-            if (mainCamera == null || hexGrid == null) return;
-
-            // Get mouse position in world space
-            Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(UnityEngine.Input.mousePosition);
-            mouseWorldPos.z = 0;
-
-            // Convert to hex coordinate
-            HexCoord hoveredCoord = HexMetrics.WorldToHexCoord(mouseWorldPos);
-
-            // Get cell at that coordinate
-            hoveredCell = hexGrid.GetCell(hoveredCoord);
         }
 
         /// <summary>
@@ -502,6 +520,31 @@ namespace FollowMyFootsteps.Grid
                 // Hide indicator when not hovering over a cell
                 hoverIndicator.SetActive(false);
             }
+        }
+
+        private void UpdateTooltip()
+        {
+            if (hoveredCell != null && hoveredCell.IsOccupied)
+            {
+                string details = hoveredCell.GetOccupyingEntityDetails();
+                Vector3 pointerScreenPos = UnityEngine.Input.mousePosition;
+                var inputManager = InputManager.Instance;
+                if (inputManager != null)
+                {
+                    pointerScreenPos = inputManager.GetInputPosition();
+                }
+
+                TooltipUI.Instance.Show(details, pointerScreenPos);
+            }
+            else
+            {
+                HideTooltip();
+            }
+        }
+
+        private void HideTooltip()
+        {
+            TooltipUI.Instance.Hide();
         }
 
         #endregion
