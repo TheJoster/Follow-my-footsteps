@@ -57,10 +57,21 @@ namespace FollowMyFootsteps.Entities
         [Tooltip("Attack range in hex cells (1 = melee, 2+ = ranged)")]
         [Range(1, 10)]
         public int AttackRange = 1;
+        
+        [Tooltip("Critical hit chance (0-100%)")]
+        [Range(0f, 100f)]
+        public float CritChance = 5f;
+        
+        [Tooltip("Critical hit damage multiplier")]
+        [Range(1f, 5f)]
+        public float CritMultiplier = 1.5f;
 
         [Header("Behavior")]
         [Tooltip("Type of NPC (affects initial state and interactions)")]
         public NPCType Type = NPCType.Neutral;
+        
+        [Tooltip("Faction this NPC belongs to (determines who they're hostile/friendly toward)")]
+        public Faction Faction = Faction.None;
         
         [Tooltip("Vision range for perception (in hex cells)")]
         [Range(1, 20)]

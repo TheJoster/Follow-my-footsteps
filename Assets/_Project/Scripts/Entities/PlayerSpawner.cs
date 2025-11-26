@@ -145,6 +145,13 @@ namespace FollowMyFootsteps.Entities
             // Add SpriteRenderer
             SpriteRenderer spriteRenderer = playerObj.AddComponent<SpriteRenderer>();
             
+            // Add CircleCollider2D for NPC perception detection
+            CircleCollider2D collider = playerObj.AddComponent<CircleCollider2D>();
+            collider.radius = 0.5f; // Match the detection radius in PerceptionComponent
+            collider.isTrigger = true; // Don't interfere with movement, just for detection
+            
+            Debug.Log($"[PlayerSpawner] Added CircleCollider2D for NPC perception detection");
+            
             Debug.Log($"[PlayerSpawner] Player sprite is null: {playerDefinition.PlayerSprite == null}");
             
             // Generate a simple colored square sprite if no sprite assigned

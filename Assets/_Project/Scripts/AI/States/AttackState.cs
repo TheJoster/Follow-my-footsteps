@@ -20,6 +20,8 @@ namespace FollowMyFootsteps.AI.States
 
         private int attackRange = 1; // Melee range (1 hex)
         private int attackDamage = 10;
+        private float critChance = 0.05f; // 5% default crit chance
+        private float critMultiplier = 1.5f; // Default crit multiplier
         private float attackCooldown = 1f; // Seconds between attacks
         private float lastAttackTime = -999f;
 
@@ -40,6 +42,8 @@ namespace FollowMyFootsteps.AI.States
             {
                 attackDamage = controller.Definition.AttackDamage;
                 attackRange = controller.Definition.AttackRange;
+                critChance = controller.Definition.CritChance / 100f; // Convert from percentage
+                critMultiplier = controller.Definition.CritMultiplier;
             }
         }
 
@@ -50,12 +54,18 @@ namespace FollowMyFootsteps.AI.States
                 Debug.Log($"[AttackState] {npcController.EntityName} entering attack state");
             }
 
-            // Find target from perception
-            currentTarget = perception != null ? perception.GetClosestTarget() : null;
+            // Find target from perception - use faction-aware selection
+            currentTarget = perception != null ? perception.GetMostThreateningTarget() : null;
+            
+            // Fallback to closest valid enemy if no threatening target
+            if (currentTarget == null && perception != null)
+            {
+                currentTarget = perception.GetClosestValidEnemy();
+            }
 
             if (currentTarget == null && showDebugLogs)
             {
-                Debug.LogWarning($"[AttackState] {npcController.EntityName} has no target to attack");
+                Debug.LogWarning($"[AttackState] {npcController.EntityName} has no valid target to attack");
             }
         }
 
@@ -73,10 +83,16 @@ namespace FollowMyFootsteps.AI.States
             if (npcController.RuntimeData == null || healthComponent == null) return;
             if (npcController.RuntimeData.CurrentActionPoints <= 0) return;
 
-            // Re-acquire target if lost
+            // Re-acquire target if lost - use faction-aware selection
             if (currentTarget == null || !IsTargetValid())
             {
-                currentTarget = perception != null ? perception.GetClosestTarget() : null;
+                currentTarget = perception != null ? perception.GetMostThreateningTarget() : null;
+                
+                // Fallback to closest valid enemy
+                if (currentTarget == null && perception != null)
+                {
+                    currentTarget = perception.GetClosestValidEnemy();
+                }
             }
 
             // No valid target, transition back to patrol/idle
@@ -108,10 +124,16 @@ namespace FollowMyFootsteps.AI.States
 
         public void OnTurnStart()
         {
-            // Refresh target at start of turn
+            // Refresh target at start of turn - use faction-aware selection
             if (perception != null)
             {
-                currentTarget = perception.GetClosestTarget();
+                currentTarget = perception.GetMostThreateningTarget();
+                
+                // Fallback to closest valid enemy
+                if (currentTarget == null)
+                {
+                    currentTarget = perception.GetClosestValidEnemy();
+                }
             }
         }
 
@@ -149,7 +171,8 @@ namespace FollowMyFootsteps.AI.States
                 attackDamage,
                 DamageType.Physical,
                 canCrit: true,
-                critChance: 0.15f
+                critChance: critChance,
+                critMultiplier: critMultiplier
             );
 
             if (damageDealt > 0)
@@ -211,6 +234,16 @@ namespace FollowMyFootsteps.AI.States
 
             var targetHealth = currentTarget.GetComponent<HealthComponent>();
             if (targetHealth != null && targetHealth.IsDead) return false;
+
+            // Check faction rules - only attack valid enemies
+            if (perception != null && !perception.IsValidEnemy(currentTarget))
+            {
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[AttackState] {npcController.EntityName}: {currentTarget.name} is no longer a valid enemy (faction rules)");
+                }
+                return false;
+            }
 
             // Check if target still in perception range
             if (perception != null)

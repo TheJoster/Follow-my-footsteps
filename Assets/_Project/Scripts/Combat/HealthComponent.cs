@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using FollowMyFootsteps.Entities;
 
 namespace FollowMyFootsteps.Combat
 {
@@ -152,6 +153,12 @@ namespace FollowMyFootsteps.Combat
             // Trigger events
             OnDamageTaken?.Invoke(actualDamage, attacker);
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+            // Broadcast distress call for faction-wide ally protection
+            if (FactionAlertManager.Instance != null && attacker != null)
+            {
+                FactionAlertManager.Instance.BroadcastDistressCall(gameObject, attacker, actualDamage);
+            }
 
             // Spawn damage popup
             if (spawnDamagePopups)

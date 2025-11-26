@@ -26,14 +26,38 @@ namespace FollowMyFootsteps.AI
         
         public void OnUpdate(object entity)
         {
+            // Check if NPC should attack
+            if (entity is NPCController npcController)
+            {
+                // Force a perception scan at the start of turn
+                var perception = npcController.GetComponent<PerceptionComponent>();
+                if (perception != null)
+                {
+                    perception.ScanForTargets();
+                }
+                
+                // Check if this NPC is hostile
+                if (npcController.Definition != null && 
+                    npcController.Definition.Type == Entities.NPCType.Hostile)
+                {
+                    // Try to detect player
+                    if (perception != null)
+                    {
+                        var target = perception.GetClosestTarget();
+                        if (target != null)
+                        {
+                            Debug.Log($"[IdleState] {npcController.EntityName} detected {target.name}, transitioning to AttackState");
+                            npcController.GetStateMachine()?.ChangeState("AttackState");
+                            return;
+                        }
+                    }
+                }
+            }
+            
             // Turn-based idle: Do nothing, just count turns
-            // NPCController will handle state transitions based on perception/events
             turnsIdled++;
             
             Debug.Log($"[IdleState] NPC idling (turn {turnsIdled})");
-            
-            // Optional: Could auto-transition after certain turns
-            // For now, NPCController handles all transitions via perception system
         }
         
         public void OnExit(object entity)

@@ -125,6 +125,9 @@ namespace FollowMyFootsteps
             {
                 Debug.Log($"[NPCController] {EntityName} calling InitializeNPC()");
                 InitializeNPC();
+                
+                // Verify cell occupancy after Start initialization
+                VerifyCellOccupancy("after Start()");
             }
             else
             {
@@ -262,9 +265,18 @@ namespace FollowMyFootsteps
             stateMachine.AddState(new DialogueState(maxDistance: 2f));
             stateMachine.AddState(new WorkState(runtimeData.Position, WorkState.WorkType.Farming, duration: 3f));
             
+            // Add defensive combat states if NPC can fight back
+            if (CanFightBack())
+            {
+                stateMachine.AddState(new AttackState(this));
+                stateMachine.AddState(new FleeState(this, minSafeDistance: 8f, healthPercent: 0.3f));
+                Debug.Log($"[NPCController] {EntityName} can defend itself (Damage: {npcDefinition.AttackDamage}, Range: {npcDefinition.AttackRange})");
+            }
+            
             if (showDebugLogs)
             {
-                Debug.Log("[NPCController] Added Friendly states: Idle, Wander, Patrol, Dialogue, Work");
+                Debug.Log("[NPCController] Added Friendly states: Idle, Wander, Patrol, Dialogue, Work" + 
+                         (CanFightBack() ? ", Attack, Flee" : ""));
             }
         }
 
@@ -277,9 +289,18 @@ namespace FollowMyFootsteps
             stateMachine.AddState(new TradeState(maxDistance: 2f));
             stateMachine.AddState(new WorkState(runtimeData.Position, WorkState.WorkType.Crafting, duration: 4f));
             
+            // Add defensive combat states if NPC can fight back
+            if (CanFightBack())
+            {
+                stateMachine.AddState(new AttackState(this));
+                stateMachine.AddState(new FleeState(this, minSafeDistance: 8f, healthPercent: 0.3f));
+                Debug.Log($"[NPCController] {EntityName} can defend itself (Damage: {npcDefinition.AttackDamage}, Range: {npcDefinition.AttackRange})");
+            }
+            
             if (showDebugLogs)
             {
-                Debug.Log("[NPCController] Added Neutral states: Idle, Trade, Work");
+                Debug.Log("[NPCController] Added Neutral states: Idle, Trade, Work" + 
+                         (CanFightBack() ? ", Attack, Flee" : ""));
             }
         }
 
@@ -361,13 +382,41 @@ namespace FollowMyFootsteps
         }
 
         /// <summary>
-        /// Take damage and check for state transitions
+        /// Take damage and check for state transitions.
+        /// Overload without attacker for backwards compatibility.
         /// </summary>
         public void TakeDamage(int amount)
         {
+            TakeDamage(amount, null);
+        }
+
+        /// <summary>
+        /// Take damage from an attacker and check for state transitions
+        /// </summary>
+        /// <param name="amount">Damage amount</param>
+        /// <param name="attacker">The attacker GameObject (can be null)</param>
+        public void TakeDamage(int amount, GameObject attacker)
+        {
             if (!IsAlive) return;
             
-            runtimeData.CurrentHealth -= amount;
+            // Use HealthComponent if available (it will broadcast distress calls)
+            if (healthComponent != null)
+            {
+                healthComponent.TakeDamage(amount, attacker);
+                // Sync runtime data with health component
+                runtimeData.CurrentHealth = healthComponent.CurrentHealth;
+            }
+            else
+            {
+                // Fallback: direct health manipulation
+                runtimeData.CurrentHealth -= amount;
+                
+                // Manually broadcast distress call if no HealthComponent
+                if (Entities.FactionAlertManager.Instance != null && attacker != null)
+                {
+                    Entities.FactionAlertManager.Instance.BroadcastDistressCall(gameObject, attacker, amount);
+                }
+            }
             
             if (showDebugLogs)
             {
@@ -440,9 +489,14 @@ namespace FollowMyFootsteps
             {
                 perception.SetVisionRange(npcDefinition.VisionRange);
                 
+                // Configure target layers to detect player
+                // Use -1 (Everything) to ensure detection works regardless of layer
+                // This detects all GameObjects with colliders
+                perception.SetTargetLayers(-1);
+                
                 if (showDebugLogs)
                 {
-                    Debug.Log($"[NPCController] Initialized perception with vision range {npcDefinition.VisionRange}");
+                    Debug.Log($"[NPCController] Initialized perception with vision range {npcDefinition.VisionRange}, targetLayers: Everything");
                 }
             }
         }
@@ -459,11 +513,59 @@ namespace FollowMyFootsteps
                 // Subscribe to health events
                 healthComponent.OnDeath.AddListener(OnNPCDeath);
                 healthComponent.OnHealthChanged.AddListener(OnHealthChanged);
+                healthComponent.OnDamageTaken.AddListener(OnDamageTakenHandler);
                 
                 if (showDebugLogs)
                 {
                     Debug.Log($"[NPCController] Initialized health: {npcDefinition.MaxHealth} HP");
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Check if this NPC can fight back (has attack capability)
+        /// </summary>
+        private bool CanFightBack()
+        {
+            return npcDefinition != null && 
+                   npcDefinition.AttackDamage > 0 && 
+                   npcDefinition.AttackRange > 0;
+        }
+        
+        /// <summary>
+        /// Handle being attacked - trigger defensive behavior
+        /// </summary>
+        private void OnDamageTakenHandler(int damage, GameObject attacker)
+        {
+            if (attacker == null || npcDefinition == null) return;
+            
+            // Only non-hostile NPCs need to switch to defensive mode
+            // Hostile NPCs are already in combat mode
+            if (npcDefinition.Type == NPCType.Hostile) return;
+            
+            // Check if we can fight back
+            if (!CanFightBack())
+            {
+                // Can't fight, try to flee if we have FleeState
+                if (stateMachine.HasState("FleeState"))
+                {
+                    Debug.Log($"[NPCController] {EntityName} can't fight back, attempting to flee from {attacker.name}");
+                    ChangeState("FleeState");
+                }
+                return;
+            }
+            
+            // Register threat and set retaliation target (with damage for threat assessment)
+            if (perception != null)
+            {
+                perception.SetRetaliationTarget(attacker, damage);
+            }
+            
+            // Switch to Attack state if we have it
+            if (stateMachine.HasState("AttackState"))
+            {
+                Debug.Log($"[NPCController] {EntityName} is retaliating against {attacker.name}!");
+                ChangeState("AttackState");
             }
         }
         
@@ -754,6 +856,47 @@ namespace FollowMyFootsteps
                 {
                     runtimeData.CurrentHealth = npcDefinition.MaxHealth;
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Debug helper to verify cell occupancy is correct
+        /// </summary>
+        private void VerifyCellOccupancy(string context)
+        {
+            var hexGrid = FindFirstObjectByType<HexGrid>();
+            if (hexGrid == null || runtimeData == null) 
+            {
+                Debug.LogWarning($"[NPCController] {EntityName} VerifyCellOccupancy({context}): hexGrid or runtimeData is null");
+                return;
+            }
+            
+            var cell = hexGrid.GetCell(runtimeData.Position);
+            if (cell == null)
+            {
+                Debug.LogError($"[NPCController] {EntityName} VerifyCellOccupancy({context}): Cell at {runtimeData.Position} is NULL!");
+                return;
+            }
+            
+            bool hasOccupant = cell.OccupyingEntity.HasValue;
+            string occupantName = hasOccupant ? cell.OccupyingEntity.Value.Name : "NONE";
+            
+            Debug.Log($"[NPCController] {EntityName} VerifyCellOccupancy({context}): " +
+                     $"Cell {runtimeData.Position} IsOccupied={cell.IsOccupied}, " +
+                     $"OccupyingEntity={occupantName}");
+                     
+            // If something is wrong, try to fix it
+            if (!cell.IsOccupied || !hasOccupant)
+            {
+                Debug.LogWarning($"[NPCController] {EntityName}: Cell occupancy incorrect! Fixing...");
+                cell.IsOccupied = true;
+                cell.OccupyingEntity = new HexCell.HexOccupantInfo
+                {
+                    Name = npcDefinition.NPCName,
+                    CurrentHealth = runtimeData.CurrentHealth,
+                    MaxHealth = npcDefinition.MaxHealth,
+                    Type = npcDefinition.Type.ToString()
+                };
             }
         }
     }

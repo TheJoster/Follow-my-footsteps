@@ -19,7 +19,12 @@ MonoBehaviour:
   MaxActionPoints: 4
   MovementSpeed: 4
   MovementRange: 5
+  AttackDamage: 18
+  AttackRange: 1
+  CritChance: 15
+  CritMultiplier: 2.5
   Type: 2
+  Faction: 4
   VisionRange: 7
   InitialState: Patrol
   PatrolWaypoints: []

@@ -68,6 +68,25 @@ namespace FollowMyFootsteps.AI
                 return;
             }
             
+            // Check if NPC should attack (hostile NPCs detect player)
+            if (npc.Definition != null && npc.Definition.Type == NPCType.Hostile)
+            {
+                var perception = npc.GetComponent<PerceptionComponent>();
+                if (perception != null)
+                {
+                    // Force scan for targets
+                    perception.ScanForTargets();
+                    
+                    var target = perception.GetClosestTarget();
+                    if (target != null)
+                    {
+                        Debug.Log($"[PatrolState] {npc.EntityName} detected {target.name}, transitioning to AttackState");
+                        npc.GetStateMachine()?.ChangeState("AttackState");
+                        return;
+                    }
+                }
+            }
+            
             Debug.Log($"[PatrolState] OnUpdate called for {npc.EntityName}. AP: {npc.ActionPoints}, Moving: {isMovingToWaypoint}, HasRequested: {hasRequestedPath}");
             
             var movement = npc.GetMovementController();

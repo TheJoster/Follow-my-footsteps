@@ -30,6 +30,7 @@ namespace FollowMyFootsteps.Tests
             Assert.AreEqual(3f, definition.MovementSpeed);
             Assert.AreEqual(5, definition.MovementRange);
             Assert.AreEqual(NPCType.Neutral, definition.Type);
+            Assert.AreEqual(Faction.None, definition.Faction);
             Assert.AreEqual(5, definition.VisionRange);
             Assert.AreEqual("Idle", definition.InitialState);
         }

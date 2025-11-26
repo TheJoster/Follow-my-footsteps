@@ -92,6 +92,11 @@ namespace FollowMyFootsteps.Entities
             npc.AddComponent<SpriteRenderer>();
             npc.AddComponent<NPCController>();
             npc.AddComponent<MovementController>();
+            
+            // Add CircleCollider2D for perception detection (NPCs detecting each other and being detected by player)
+            CircleCollider2D collider = npc.AddComponent<CircleCollider2D>();
+            collider.radius = 0.5f; // Match the detection radius in PerceptionComponent
+            collider.isTrigger = true; // Don't interfere with movement
 
             return npc;
         }
@@ -168,10 +173,16 @@ namespace FollowMyFootsteps.Entities
                 MaxHealth = definition.MaxHealth,
                 Type = definition.Type.ToString()
             };
+            
+            Debug.Log($"[EntityFactory] Set cell {position} IsOccupied={cell.IsOccupied}, OccupyingEntity={cell.OccupyingEntity?.Name ?? "NULL"}");
 
             // Register as active
             activeNPCs[entityId] = npcObject;
             npcObject.SetActive(true);
+
+            // Verify cell occupancy after activation
+            var verifyCell = hexGrid.GetCell(position);
+            Debug.Log($"[EntityFactory] VERIFY after SetActive: cell {position} IsOccupied={verifyCell?.IsOccupied}, OccupyingEntity={verifyCell?.OccupyingEntity?.Name ?? "NULL"}");
 
             Debug.Log($"[EntityFactory] Spawned {definition.NPCName} ({definition.Type}) at {position} with ID {entityId}");
 

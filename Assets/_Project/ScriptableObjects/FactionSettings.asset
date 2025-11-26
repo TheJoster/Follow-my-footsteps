@@ -1,0 +1,217 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: FactionSettings
+  m_EditorClassIdentifier: FollowMyFootsteps:FollowMyFootsteps.Entities:FactionSettings
+  factionRelationships:
+  - SourceFaction: 1
+    Relationships:
+    - TargetFaction: 2
+      Standing: 1
+    - TargetFaction: 3
+      Standing: 1
+    - TargetFaction: 4
+      Standing: -2
+    - TargetFaction: 5
+      Standing: -2
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: -2
+    - TargetFaction: 9
+      Standing: 0
+    - TargetFaction: 10
+      Standing: 1
+  - SourceFaction: 3
+    Relationships:
+    - TargetFaction: 1
+      Standing: 1
+    - TargetFaction: 2
+      Standing: 2
+    - TargetFaction: 4
+      Standing: -2
+    - TargetFaction: 5
+      Standing: -2
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: -2
+    - TargetFaction: 9
+      Standing: 0
+    - TargetFaction: 10
+      Standing: 2
+  - SourceFaction: 2
+    Relationships:
+    - TargetFaction: 1
+      Standing: 1
+    - TargetFaction: 3
+      Standing: 2
+    - TargetFaction: 4
+      Standing: -2
+    - TargetFaction: 5
+      Standing: -2
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: -2
+    - TargetFaction: 9
+      Standing: 0
+    - TargetFaction: 10
+      Standing: 1
+  - SourceFaction: 4
+    Relationships:
+    - TargetFaction: 1
+      Standing: -2
+    - TargetFaction: 2
+      Standing: -2
+    - TargetFaction: 3
+      Standing: -2
+    - TargetFaction: 5
+      Standing: -1
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: 0
+    - TargetFaction: 9
+      Standing: 1
+    - TargetFaction: 10
+      Standing: -2
+  - SourceFaction: 5
+    Relationships:
+    - TargetFaction: 1
+      Standing: -2
+    - TargetFaction: 2
+      Standing: -2
+    - TargetFaction: 3
+      Standing: -2
+    - TargetFaction: 4
+      Standing: -1
+    - TargetFaction: 6
+      Standing: 0
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: 0
+    - TargetFaction: 9
+      Standing: -2
+    - TargetFaction: 10
+      Standing: -2
+  - SourceFaction: 6
+    Relationships:
+    - TargetFaction: 1
+      Standing: -2
+    - TargetFaction: 2
+      Standing: -2
+    - TargetFaction: 3
+      Standing: -2
+    - TargetFaction: 4
+      Standing: -2
+    - TargetFaction: 5
+      Standing: -2
+    - TargetFaction: 7
+      Standing: -2
+    - TargetFaction: 8
+      Standing: 1
+    - TargetFaction: 9
+      Standing: -2
+    - TargetFaction: 10
+      Standing: -2
+  - SourceFaction: 7
+    Relationships:
+    - TargetFaction: 1
+      Standing: 0
+    - TargetFaction: 2
+      Standing: 0
+    - TargetFaction: 3
+      Standing: 0
+    - TargetFaction: 4
+      Standing: 0
+    - TargetFaction: 5
+      Standing: 0
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 8
+      Standing: 0
+    - TargetFaction: 9
+      Standing: 0
+    - TargetFaction: 10
+      Standing: 0
+  - SourceFaction: 8
+    Relationships:
+    - TargetFaction: 1
+      Standing: -2
+    - TargetFaction: 2
+      Standing: -2
+    - TargetFaction: 3
+      Standing: -2
+    - TargetFaction: 4
+      Standing: 0
+    - TargetFaction: 5
+      Standing: 0
+    - TargetFaction: 6
+      Standing: 2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 9
+      Standing: 0
+    - TargetFaction: 10
+      Standing: -2
+  - SourceFaction: 9
+    Relationships:
+    - TargetFaction: 1
+      Standing: 0
+    - TargetFaction: 2
+      Standing: 0
+    - TargetFaction: 3
+      Standing: 0
+    - TargetFaction: 4
+      Standing: 1
+    - TargetFaction: 5
+      Standing: -2
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: 0
+    - TargetFaction: 10
+      Standing: 0
+  - SourceFaction: 10
+    Relationships:
+    - TargetFaction: 1
+      Standing: 1
+    - TargetFaction: 2
+      Standing: 1
+    - TargetFaction: 3
+      Standing: 2
+    - TargetFaction: 4
+      Standing: -2
+    - TargetFaction: 5
+      Standing: -2
+    - TargetFaction: 6
+      Standing: -2
+    - TargetFaction: 7
+      Standing: 0
+    - TargetFaction: 8
+      Standing: -2
+    - TargetFaction: 9
+      Standing: 0
+  DefaultStanding: 0
+  PlayerFaction: 1

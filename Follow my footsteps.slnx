@@ -1,0 +1,5 @@
+﻿<Solution>
+  <Project Path="FollowMyFootsteps.csproj" />
+  <Project Path="FollowMyFootsteps.Tests.EditMode.csproj" />
+  <Project Path="FollowMyFootsteps.Editor.csproj" />
+</Solution>

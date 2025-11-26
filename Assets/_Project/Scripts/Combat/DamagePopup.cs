@@ -36,9 +36,8 @@ namespace FollowMyFootsteps.Combat
         [Tooltip("Healing color")]
         private Color healingColor = Color.green;
 
-        [SerializeField]
-        [Tooltip("Critical hit scale multiplier")]
-        private float criticalScale = 1.5f;
+        // Critical hit scale multiplier (removed - using font size instead)
+        // private float criticalScale = 1.5f;
 
         private TextMeshProUGUI textMesh;
         private Canvas canvas;
