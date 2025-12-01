@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Collections.Generic;
 using FollowMyFootsteps.Input;
+using FollowMyFootsteps.UI;
 using UnityEngine;
 
 namespace FollowMyFootsteps.Grid
@@ -76,7 +78,7 @@ namespace FollowMyFootsteps.Grid
 
         [SerializeField]
         [Tooltip("Size of the info panel")]
-        private Vector2 infoPanelSize = new Vector2(300, 320);
+        private Vector2 infoPanelSize = new Vector2(300, 400);
 
         public enum InfoPanelPosition
         {
@@ -500,6 +502,12 @@ namespace FollowMyFootsteps.Grid
             // Get the cell at the world position
             hoveredCell = hexGrid.GetCellAtWorldPosition(worldPosition);
 
+            // Notify EntityStackVisualizer of hover changes
+            if (EntityStackVisualizer.Instance != null)
+            {
+                EntityStackVisualizer.Instance.SetHoveredHex(hoveredCell?.Coordinates);
+            }
+
             if (hoveredCell == null)
             {
                 if (hoverIndicator != null && hoverIndicator.activeSelf)
@@ -722,8 +730,12 @@ namespace FollowMyFootsteps.Grid
                     ? hoveredCell.Terrain.TerrainName 
                     : "None";
 
+                // Calculate expected world position for debugging
+                Vector3 expectedWorldPos = HexMetrics.GetWorldPosition(hoveredCell.Coordinates);
+
                 info = $"Hovered Cell Info\n" +
                        $"Coord: ({hoveredCell.Coordinates.q}, {hoveredCell.Coordinates.r})\n" +
+                       $"World: ({expectedWorldPos.x:F1}, {expectedWorldPos.y:F1})\n" +
                        $"Terrain: {terrainName}\n" +
                        $"Walkable: {hoveredCell.IsWalkable}\n" +
                        $"Occupied: {hoveredCell.IsOccupied}\n" +
@@ -732,14 +744,46 @@ namespace FollowMyFootsteps.Grid
                 // Add occupant details if cell is occupied
                 if (hoveredCell.IsOccupied)
                 {
-                    string occupantDetails = hoveredCell.GetOccupyingEntityDetails();
-                    if (!string.IsNullOrEmpty(occupantDetails))
+                    int occupantCount = hoveredCell.OccupantCount;
+                    
+                    if (occupantCount > 1)
                     {
-                        info += $"\n--- Occupant ---\n{occupantDetails}";
+                        // Multiple entities - show full stats for ALL with cycling hint
+                        // Show platform-appropriate hint
+                        string cycleHint = Application.isMobilePlatform 
+                            ? "Hold to cycle" 
+                            : "Tab to cycle";
+                        info += $"\n--- {occupantCount} Entities ({cycleHint}) ---";
+                        
+                        // Show which entity is selected for visual highlight
+                        int selectedIndex = 0;
+                        if (EntityStackVisualizer.Instance != null)
+                        {
+                            selectedIndex = EntityStackVisualizer.Instance.GetSelectedIndex(hoveredCell.Coordinates);
+                        }
+                        
+                        // Show full stats for EVERY occupant
+                        for (int i = 0; i < hoveredCell.Occupants.Count; i++)
+                        {
+                            var occupant = hoveredCell.Occupants[i];
+                            string marker = (i == selectedIndex) ? "►" : " ";
+                            info += $"\n{marker}[{i + 1}] {occupant.Name}";
+                            info += $"\n    HP: {occupant.CurrentHealth}/{occupant.MaxHealth}";
+                            info += $"\n    Type: {occupant.Type}";
+                        }
                     }
                     else
                     {
-                        info += $"\n--- Occupant ---\nCell marked occupied but no details available";
+                        // Single occupant - show full details
+                        string occupantDetails = hoveredCell.GetOccupyingEntityDetails();
+                        if (!string.IsNullOrEmpty(occupantDetails))
+                        {
+                            info += $"\n--- Occupant ---\n{occupantDetails}";
+                        }
+                        else
+                        {
+                            info += $"\n--- Occupant ---\nCell marked occupied but no details available";
+                        }
                     }
                 }
 
@@ -769,6 +813,13 @@ namespace FollowMyFootsteps.Grid
                         info += $"\n--- Pathfinding ---";
                         info += $"\nUnreachable!";
                     }
+                    
+                    // Debug: Show player position info
+                    info += $"\n--- Player Debug ---";
+                    info += $"\nLogical: {player.CurrentPosition}";
+                    info += $"\nVisual: ({player.transform.position.x:F1}, {player.transform.position.y:F1})";
+                    Vector3 expectedPlayerPos = HexMetrics.GetWorldPosition(player.CurrentPosition);
+                    info += $"\nExpected: ({expectedPlayerPos.x:F1}, {expectedPlayerPos.y:F1})";
                 }
             }
             

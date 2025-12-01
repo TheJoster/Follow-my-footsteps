@@ -6,6 +6,7 @@ using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Entities;
 using FollowMyFootsteps.Core;
 using FollowMyFootsteps.Combat;
+using FollowMyFootsteps.UI;
 
 namespace FollowMyFootsteps
 {
@@ -28,9 +29,15 @@ namespace FollowMyFootsteps
         private MovementController movementController;
         private PerceptionComponent perception;
         private HealthComponent healthComponent;
+        private NPCPathVisualizer pathVisualizer;
         
         [Header("Debug")]
         [SerializeField] private bool showDebugLogs = true;
+        [SerializeField] private bool showPathVisualization = true;
+        
+        // Initialization flag to prevent double initialization
+        private bool isInitialized = false;
+        private bool healthEventsSubscribed = false;
         
         /// <summary>
         /// Get the NPC's definition
@@ -56,6 +63,16 @@ namespace FollowMyFootsteps
         /// Expose debug logging state for AI states
         /// </summary>
         public bool ShowDebugLogs => showDebugLogs;
+        
+        /// <summary>
+        /// Expose path visualization toggle for AI states
+        /// </summary>
+        public bool ShowPathVisualization => showPathVisualization;
+        
+        /// <summary>
+        /// Get the NPC path visualizer component
+        /// </summary>
+        public NPCPathVisualizer PathVisualizer => pathVisualizer;
         
         #region ITurnEntity Implementation
         
@@ -112,22 +129,42 @@ namespace FollowMyFootsteps
                 Debug.Log($"[NPCController] {gameObject.name} added HealthComponent");
             }
             
+            // Get or add NPCPathVisualizer for debug visualization
+            pathVisualizer = GetComponent<NPCPathVisualizer>();
+            if (pathVisualizer == null)
+            {
+                pathVisualizer = gameObject.AddComponent<NPCPathVisualizer>();
+                Debug.Log($"[NPCController] {gameObject.name} added NPCPathVisualizer");
+            }
+            pathVisualizer.ShowPath = showPathVisualization;
+            
+            // Initialize path visualizer with faction and movement range if definition exists
+            if (npcDefinition != null)
+            {
+                pathVisualizer.SetFaction(npcDefinition.Faction);
+                pathVisualizer.SetMovementRange(npcDefinition.MovementRange);
+            }
+            
             // Skip error for pooled NPCs without definition
             // Definition is assigned later via Initialize() method when spawned
         }
 
         private void Start()
         {
-            Debug.Log($"[NPCController] Start called on {gameObject.name}, isActive={gameObject.activeInHierarchy}, definition={npcDefinition != null}");
+            Debug.Log($"[NPCController] Start called on {gameObject.name}, isActive={gameObject.activeInHierarchy}, definition={npcDefinition != null}, isInitialized={isInitialized}");
             
-            // Only initialize if definition is assigned (spawned NPC, not pooled)
-            if (npcDefinition != null)
+            // Only initialize if not already initialized (prevents double initialization)
+            if (npcDefinition != null && !isInitialized)
             {
-                Debug.Log($"[NPCController] {EntityName} calling InitializeNPC()");
+                Debug.Log($"[NPCController] {EntityName} calling InitializeNPC() from Start()");
                 InitializeNPC();
                 
                 // Verify cell occupancy after Start initialization
                 VerifyCellOccupancy("after Start()");
+            }
+            else if (isInitialized)
+            {
+                Debug.Log($"[NPCController] {EntityName} already initialized, skipping InitializeNPC() in Start()");
             }
             else
             {
@@ -138,6 +175,9 @@ namespace FollowMyFootsteps
             if (movementController != null)
             {
                 movementController.OnMovementStep += OnMovementStepHandler;
+                movementController.OnMovementStart += OnMovementStartHandler;
+                movementController.OnMovementComplete += OnMovementCompleteHandler;
+                movementController.OnMovementCancelled += OnMovementCancelledHandler;
                 Debug.Log($"[NPCController] {EntityName} subscribed to movement events");
             }
             
@@ -172,6 +212,12 @@ namespace FollowMyFootsteps
         /// <param name="startPosition">Starting hex coordinate</param>
         public void Initialize(NPCDefinition definition, HexCoord startPosition)
         {
+            Debug.Log($"[NPCController] Initialize called for {definition.NPCName} at {startPosition}, isInitialized={isInitialized}");
+            
+            // Reset initialization flag for respawning pooled NPCs
+            isInitialized = false;
+            healthEventsSubscribed = false;
+            
             npcDefinition = definition;
             runtimeData = new NPCRuntimeData(definition, startPosition);
             InitializeNPC();
@@ -183,6 +229,13 @@ namespace FollowMyFootsteps
         private void InitializeNPC()
         {
             if (npcDefinition == null) return;
+            
+            // Prevent double initialization
+            if (isInitialized)
+            {
+                Debug.Log($"[NPCController] {EntityName} InitializeNPC skipped - already initialized");
+                return;
+            }
             
             // Create runtime data if not already set (editor placement)
             if (runtimeData == null)
@@ -201,12 +254,35 @@ namespace FollowMyFootsteps
             // Initialize perception
             InitializePerception();
             
+            // Initialize path visualizer with faction and movement range
+            InitializePathVisualizer();
+            
             // Set visual appearance
             ApplyVisualAppearance();
+            
+            // Mark as initialized to prevent double initialization
+            isInitialized = true;
             
             if (showDebugLogs)
             {
                 Debug.Log($"[NPCController] Initialized {npcDefinition.NPCName} at {runtimeData.Position}");
+            }
+        }
+        
+        /// <summary>
+        /// Initialize path visualizer with NPC-specific settings
+        /// </summary>
+        private void InitializePathVisualizer()
+        {
+            if (pathVisualizer != null && npcDefinition != null)
+            {
+                pathVisualizer.SetFaction(npcDefinition.Faction);
+                pathVisualizer.SetMovementRange(npcDefinition.MovementRange);
+                
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[NPCController] Initialized path visualizer: Faction={npcDefinition.Faction}, MovementRange={npcDefinition.MovementRange}");
+                }
             }
         }
 
@@ -508,12 +584,18 @@ namespace FollowMyFootsteps
         {
             if (healthComponent != null && npcDefinition != null)
             {
-                healthComponent.Initialize(npcDefinition.MaxHealth);
+                // Subscribe to health events BEFORE Initialize to catch the initial OnHealthChanged
+                // Only subscribe once to prevent duplicate event handling
+                if (!healthEventsSubscribed)
+                {
+                    healthComponent.OnDeath.AddListener(OnNPCDeath);
+                    healthComponent.OnHealthChanged.AddListener(OnHealthChanged);
+                    healthComponent.OnDamageTaken.AddListener(OnDamageTakenHandler);
+                    healthEventsSubscribed = true;
+                    Debug.Log($"[NPCController] {EntityName} subscribed to health events");
+                }
                 
-                // Subscribe to health events
-                healthComponent.OnDeath.AddListener(OnNPCDeath);
-                healthComponent.OnHealthChanged.AddListener(OnHealthChanged);
-                healthComponent.OnDamageTaken.AddListener(OnDamageTakenHandler);
+                healthComponent.Initialize(npcDefinition.MaxHealth);
                 
                 if (showDebugLogs)
                 {
@@ -593,16 +675,28 @@ namespace FollowMyFootsteps
             if (hexGrid == null || npcDefinition == null || runtimeData == null)
                 return;
             
+            // Log with stack trace to identify caller
+            Debug.Log($"[NPCController] UpdateCellOccupancyInfo called for {EntityName} - runtimeData.Position: {runtimeData.Position}, transform.position: {transform.position}\nCaller: {new System.Diagnostics.StackTrace(1, true)}");
+            
             var cell = hexGrid.GetCell(runtimeData.Position);
-            if (cell != null && cell.IsOccupied)
+            if (cell != null)
             {
-                cell.OccupyingEntity = new HexCell.HexOccupantInfo
+                var occupantInfo = new HexCell.HexOccupantInfo
                 {
                     Name = npcDefinition.NPCName,
                     CurrentHealth = runtimeData.CurrentHealth,
                     MaxHealth = npcDefinition.MaxHealth,
-                    Type = npcDefinition.Type.ToString()
+                    Type = npcDefinition.Type.ToString(),
+                    Entity = gameObject
                 };
+                
+                cell.AddOccupant(occupantInfo);
+                
+                // Register with stack visualizer for visual stacking
+                if (EntityStackVisualizer.Instance != null)
+                {
+                    EntityStackVisualizer.Instance.RegisterEntity(runtimeData.Position, gameObject);
+                }
             }
         }
 
@@ -630,9 +724,14 @@ namespace FollowMyFootsteps
                 var cell = hexGrid.GetCell(runtimeData.Position);
                 if (cell != null)
                 {
-                    cell.IsOccupied = false;
-                    cell.OccupyingEntity = null;
+                    cell.RemoveOccupant(gameObject);
                 }
+            }
+            
+            // Unregister from stack visualizer
+            if (EntityStackVisualizer.Instance != null)
+            {
+                EntityStackVisualizer.Instance.UnregisterEntity(gameObject);
             }
 
             // TODO: Drop loot (Phase 6)
@@ -700,6 +799,9 @@ namespace FollowMyFootsteps
         {
             if (!IsAlive) return;
             
+            // Debug: Log position at turn start
+            Debug.Log($"[NPCController] {EntityName} OnTurnStart - Position: {runtimeData?.Position}, Transform: {transform.position}");
+            
             // Refresh action points
             runtimeData.CurrentActionPoints = npcDefinition.MaxActionPoints;
             
@@ -745,6 +847,9 @@ namespace FollowMyFootsteps
         public void OnTurnEnd()
         {
             if (!IsAlive) return;
+            
+            // Debug: Log position at turn end
+            Debug.Log($"[NPCController] {EntityName} OnTurnEnd - Position: {runtimeData?.Position}, Transform: {transform.position}");
             
             if (showDebugLogs)
             {
@@ -797,12 +902,57 @@ namespace FollowMyFootsteps
             if (movementController != null)
             {
                 movementController.OnMovementStep -= OnMovementStepHandler;
+                movementController.OnMovementStart -= OnMovementStartHandler;
+                movementController.OnMovementComplete -= OnMovementCompleteHandler;
+                movementController.OnMovementCancelled -= OnMovementCancelledHandler;
             }
             
             // Unregister from SimulationManager
             if (SimulationManager.Instance != null)
             {
                 SimulationManager.Instance.UnregisterEntity(this);
+            }
+        }
+
+        /// <summary>
+        /// Called when movement starts - show path visualization
+        /// </summary>
+        private void OnMovementStartHandler()
+        {
+            if (pathVisualizer != null && movementController != null && movementController.CurrentPath != null)
+            {
+                // Determine path type based on current context
+                var pathType = NPCPathVisualizer.PathType.Normal;
+                
+                // Check if responding to ally distress
+                if (perception != null && perception.AllyToProtect != null)
+                {
+                    pathType = NPCPathVisualizer.PathType.AllyProtection;
+                }
+                
+                pathVisualizer.ShowPathLine(new List<HexCoord>(movementController.CurrentPath), pathType);
+            }
+        }
+        
+        /// <summary>
+        /// Called when movement completes - hide path visualization
+        /// </summary>
+        private void OnMovementCompleteHandler()
+        {
+            if (pathVisualizer != null)
+            {
+                pathVisualizer.HidePath();
+            }
+        }
+        
+        /// <summary>
+        /// Called when movement is cancelled - hide path visualization
+        /// </summary>
+        private void OnMovementCancelledHandler()
+        {
+            if (pathVisualizer != null)
+            {
+                pathVisualizer.HidePath();
             }
         }
 
@@ -814,30 +964,43 @@ namespace FollowMyFootsteps
             var hexGrid = FindFirstObjectByType<HexGrid>();
             if (hexGrid == null || runtimeData == null) return;
             
+            HexCoord oldPosition = runtimeData.Position;
+            
             // Clear old cell occupancy
-            var oldCell = hexGrid.GetCell(runtimeData.Position);
+            var oldCell = hexGrid.GetCell(oldPosition);
             if (oldCell != null)
             {
-                oldCell.IsOccupied = false;
-                oldCell.OccupyingEntity = null;
+                oldCell.RemoveOccupant(gameObject);
             }
             
             // Update runtime position
-            HexCoord oldPosition = runtimeData.Position;
             runtimeData.Position = newPosition;
             
             // Set new cell occupancy
             var newCell = hexGrid.GetCell(newPosition);
             if (newCell != null)
             {
-                newCell.IsOccupied = true;
-                newCell.OccupyingEntity = new HexCell.HexOccupantInfo
+                var occupantInfo = new HexCell.HexOccupantInfo
                 {
                     Name = npcDefinition.NPCName,
                     CurrentHealth = runtimeData.CurrentHealth,
                     MaxHealth = npcDefinition.MaxHealth,
-                    Type = npcDefinition.Type.ToString()
+                    Type = npcDefinition.Type.ToString(),
+                    Entity = gameObject
                 };
+                newCell.AddOccupant(occupantInfo);
+            }
+            
+            // Update stack visualizer
+            if (EntityStackVisualizer.Instance != null)
+            {
+                EntityStackVisualizer.Instance.MoveEntity(oldPosition, newPosition, gameObject);
+            }
+            
+            // Update path visualization (remove completed step)
+            if (pathVisualizer != null)
+            {
+                pathVisualizer.OnStepCompleted(newPosition);
             }
             
             if (showDebugLogs)
@@ -878,25 +1041,36 @@ namespace FollowMyFootsteps
                 return;
             }
             
-            bool hasOccupant = cell.OccupyingEntity.HasValue;
+            bool hasOccupant = cell.OccupantCount > 0;
             string occupantName = hasOccupant ? cell.OccupyingEntity.Value.Name : "NONE";
             
             Debug.Log($"[NPCController] {EntityName} VerifyCellOccupancy({context}): " +
                      $"Cell {runtimeData.Position} IsOccupied={cell.IsOccupied}, " +
-                     $"OccupyingEntity={occupantName}");
+                     $"OccupantCount={cell.OccupantCount}, FirstOccupant={occupantName}");
                      
-            // If something is wrong, try to fix it
-            if (!cell.IsOccupied || !hasOccupant)
+            // If we're not in the occupant list, add ourselves
+            bool selfFound = false;
+            foreach (var occupant in cell.Occupants)
             {
-                Debug.LogWarning($"[NPCController] {EntityName}: Cell occupancy incorrect! Fixing...");
-                cell.IsOccupied = true;
-                cell.OccupyingEntity = new HexCell.HexOccupantInfo
+                if (occupant.Entity == gameObject)
+                {
+                    selfFound = true;
+                    break;
+                }
+            }
+            
+            if (!selfFound)
+            {
+                Debug.LogWarning($"[NPCController] {EntityName}: Not in cell occupant list! Adding...");
+                var occupantInfo = new HexCell.HexOccupantInfo
                 {
                     Name = npcDefinition.NPCName,
                     CurrentHealth = runtimeData.CurrentHealth,
                     MaxHealth = npcDefinition.MaxHealth,
-                    Type = npcDefinition.Type.ToString()
+                    Type = npcDefinition.Type.ToString(),
+                    Entity = gameObject
                 };
+                cell.AddOccupant(occupantInfo);
             }
         }
     }

@@ -37,10 +37,11 @@ namespace FollowMyFootsteps.Entities
     }
 
     /// <summary>
-    /// Serializable faction relationship entry for Inspector configuration
+    /// Serializable faction relationship entry for Inspector configuration.
+    /// Using class instead of struct for better Unity serialization compatibility.
     /// </summary>
     [Serializable]
-    public class FactionRelationship
+    public class FactionRelationshipData
     {
         [Tooltip("The target faction")]
         public Faction TargetFaction;
@@ -48,7 +49,13 @@ namespace FollowMyFootsteps.Entities
         [Tooltip("How this faction views the target faction")]
         public FactionStanding Standing;
 
-        public FactionRelationship(Faction target, FactionStanding standing)
+        public FactionRelationshipData()
+        {
+            TargetFaction = Faction.None;
+            Standing = FactionStanding.Neutral;
+        }
+
+        public FactionRelationshipData(Faction target, FactionStanding standing)
         {
             TargetFaction = target;
             Standing = standing;
@@ -94,7 +101,7 @@ namespace FollowMyFootsteps.Entities
             public Faction SourceFaction;
             
             [Tooltip("How this faction views other factions")]
-            public List<FactionRelationship> Relationships = new List<FactionRelationship>();
+            public List<FactionRelationshipData> Relationships = new List<FactionRelationshipData>();
         }
 
         private void OnEnable()
@@ -407,7 +414,7 @@ namespace FollowMyFootsteps.Entities
             var group = new FactionGroup { SourceFaction = source };
             foreach (var kvp in relationships)
             {
-                group.Relationships.Add(new FactionRelationship(kvp.Key, kvp.Value));
+                group.Relationships.Add(new FactionRelationshipData(kvp.Key, kvp.Value));
             }
             factionRelationships.Add(group);
         }

@@ -34,6 +34,15 @@ namespace FollowMyFootsteps.AI
                 if (perception != null)
                 {
                     perception.ScanForTargets();
+                    
+                    // Check if an ally is in distress (all NPC types can respond to allied distress)
+                    var allyAttacker = perception.AllyAttacker;
+                    if (allyAttacker != null && perception.IsValidEnemy(allyAttacker))
+                    {
+                        Debug.Log($"[IdleState] {npcController.EntityName} responding to ally distress! Attacker: {allyAttacker.name}");
+                        npcController.GetStateMachine()?.ChangeState("AttackState");
+                        return;
+                    }
                 }
                 
                 // Check if this NPC is hostile

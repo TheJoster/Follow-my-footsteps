@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace FollowMyFootsteps.Grid
 {
@@ -168,10 +170,10 @@ namespace FollowMyFootsteps.Grid
 
         #endregion
 
-        #region Occupying Entity
+        #region Occupying Entities
 
         /// <summary>
-        /// Lightweight snapshot of the entity occupying this cell for tooltip display.
+        /// Lightweight snapshot of an entity occupying this cell for tooltip display.
         /// </summary>
         public struct HexOccupantInfo
         {
@@ -179,25 +181,146 @@ namespace FollowMyFootsteps.Grid
             public int CurrentHealth;
             public int MaxHealth;
             public string Type;
+            public GameObject Entity;  // Reference to the actual GameObject for selection
+            
+            public override string ToString()
+            {
+                return $"{Name} ({Type}) - HP: {CurrentHealth}/{MaxHealth}";
+            }
         }
 
         /// <summary>
-        /// Populated when an entity occupies this cell; cleared when the cell becomes vacant.
+        /// List of all entities occupying this cell.
+        /// Supports multiple entities stacking on the same hex.
         /// </summary>
-        public HexOccupantInfo? OccupyingEntity { get; set; }
+        private List<HexOccupantInfo> occupants = new List<HexOccupantInfo>();
+        
+        /// <summary>
+        /// Read-only access to all occupants on this cell.
+        /// </summary>
+        public IReadOnlyList<HexOccupantInfo> Occupants => occupants;
+        
+        /// <summary>
+        /// Number of entities on this cell.
+        /// </summary>
+        public int OccupantCount => occupants.Count;
 
         /// <summary>
-        /// Retrieves details about the occupying entity (if any).
+        /// Legacy property - returns the first occupant for backward compatibility.
+        /// Use Occupants list for multiple entity support.
+        /// </summary>
+        public HexOccupantInfo? OccupyingEntity 
+        { 
+            get => occupants.Count > 0 ? occupants[0] : null;
+            set
+            {
+                // Legacy setter - clears list and adds single occupant
+                occupants.Clear();
+                if (value.HasValue)
+                {
+                    occupants.Add(value.Value);
+                }
+                IsOccupied = occupants.Count > 0;
+            }
+        }
+        
+        /// <summary>
+        /// Add an occupant to this cell.
+        /// </summary>
+        public void AddOccupant(HexOccupantInfo occupant)
+        {
+            // Avoid duplicates by checking GameObject reference
+            if (occupant.Entity != null)
+            {
+                occupants.RemoveAll(o => o.Entity == occupant.Entity);
+            }
+            occupants.Add(occupant);
+            IsOccupied = true;
+        }
+        
+        /// <summary>
+        /// Remove an occupant from this cell by GameObject reference.
+        /// </summary>
+        public bool RemoveOccupant(GameObject entity)
+        {
+            int removed = occupants.RemoveAll(o => o.Entity == entity);
+            IsOccupied = occupants.Count > 0;
+            return removed > 0;
+        }
+        
+        /// <summary>
+        /// Remove an occupant by name (fallback for when GameObject is null).
+        /// </summary>
+        public bool RemoveOccupantByName(string name)
+        {
+            int removed = occupants.RemoveAll(o => o.Name == name);
+            IsOccupied = occupants.Count > 0;
+            return removed > 0;
+        }
+        
+        /// <summary>
+        /// Clear all occupants from this cell.
+        /// </summary>
+        public void ClearOccupants()
+        {
+            occupants.Clear();
+            IsOccupied = false;
+        }
+        
+        /// <summary>
+        /// Update an existing occupant's info (e.g., health changed).
+        /// </summary>
+        public void UpdateOccupant(GameObject entity, int currentHealth, int maxHealth)
+        {
+            for (int i = 0; i < occupants.Count; i++)
+            {
+                if (occupants[i].Entity == entity)
+                {
+                    var updated = occupants[i];
+                    updated.CurrentHealth = currentHealth;
+                    updated.MaxHealth = maxHealth;
+                    occupants[i] = updated;
+                    return;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Get occupant at specific index (for cycling through stacked entities).
+        /// </summary>
+        public HexOccupantInfo? GetOccupantAt(int index)
+        {
+            if (index >= 0 && index < occupants.Count)
+                return occupants[index];
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves details about all occupying entities.
         /// </summary>
         public string GetOccupyingEntityDetails()
         {
-            if (!OccupyingEntity.HasValue)
+            if (occupants.Count == 0)
             {
-                return string.Empty; // Return empty string instead of message
+                return string.Empty;
             }
 
-            HexOccupantInfo info = OccupyingEntity.Value;
-            return $"{info.Name}\nHealth: {info.CurrentHealth}/{info.MaxHealth}\nType: {info.Type}";
+            if (occupants.Count == 1)
+            {
+                var info = occupants[0];
+                return $"{info.Name}\nHealth: {info.CurrentHealth}/{info.MaxHealth}\nType: {info.Type}";
+            }
+            
+            // Multiple occupants - show summary
+            var result = new System.Text.StringBuilder();
+            result.AppendLine($"=== {occupants.Count} Entities ===");
+            for (int i = 0; i < occupants.Count; i++)
+            {
+                var info = occupants[i];
+                result.AppendLine($"[{i + 1}] {info.Name} ({info.Type})");
+                result.AppendLine($"    HP: {info.CurrentHealth}/{info.MaxHealth}");
+            }
+            return result.ToString().TrimEnd();
         }
 
         #endregion

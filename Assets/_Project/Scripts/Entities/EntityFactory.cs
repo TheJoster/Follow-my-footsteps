@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Core;
+using FollowMyFootsteps.UI;
 
 namespace FollowMyFootsteps.Entities
 {
@@ -143,12 +144,18 @@ namespace FollowMyFootsteps.Entities
 
             // Configure GameObject
             npcObject.name = entityId;
-            npcObject.transform.position = HexMetrics.GetWorldPosition(position);
-            npcObject.transform.position = new Vector3(
-                npcObject.transform.position.x,
-                npcObject.transform.position.y,
-                -1f  // Same as player, in front of terrain
-            );
+            
+            // IMPORTANT: Unparent from EntityFactory before setting position
+            // EntityFactory may be attached to PlayerSpawner which has a non-zero position
+            // Setting parent to null ensures world position is set directly
+            npcObject.transform.SetParent(null);
+            
+            // Calculate and set world position
+            Vector3 worldPos = HexMetrics.GetWorldPosition(position);
+            worldPos.z = -1f; // Same as player, in front of terrain
+            npcObject.transform.position = worldPos;
+            
+            Debug.Log($"[EntityFactory] Set {entityId} position: HexCoord={position}, WorldPos={worldPos}, parent={npcObject.transform.parent?.name ?? "null"}");
 
             // Setup SpriteRenderer
             SpriteRenderer spriteRenderer = npcObject.GetComponent<SpriteRenderer>();
@@ -164,27 +171,32 @@ namespace FollowMyFootsteps.Entities
             NPCController npcController = npcObject.GetComponent<NPCController>();
             npcController.Initialize(definition, position);
 
-            // Mark cell as occupied
-            cell.IsOccupied = true;
-            cell.OccupyingEntity = new HexCell.HexOccupantInfo
+            // Mark cell as occupied using the new multi-occupant system
+            var occupantInfo = new HexCell.HexOccupantInfo
             {
                 Name = definition.NPCName,
                 CurrentHealth = npcController.RuntimeData != null ? npcController.RuntimeData.CurrentHealth : definition.MaxHealth,
                 MaxHealth = definition.MaxHealth,
-                Type = definition.Type.ToString()
+                Type = definition.Type.ToString(),
+                Entity = npcObject
             };
+            cell.AddOccupant(occupantInfo);
             
-            Debug.Log($"[EntityFactory] Set cell {position} IsOccupied={cell.IsOccupied}, OccupyingEntity={cell.OccupyingEntity?.Name ?? "NULL"}");
-
-            // Register as active
+            // Register with stack visualizer for multi-entity support
+            if (EntityStackVisualizer.Instance != null)
+            {
+                EntityStackVisualizer.Instance.RegisterEntity(position, npcObject);
+            }
+            
+            // Register as active and activate
             activeNPCs[entityId] = npcObject;
             npcObject.SetActive(true);
+            
+            // IMPORTANT: Re-set position after SetActive to ensure it persists
+            // Some components may reset localPosition during Start()
+            npcObject.transform.position = worldPos;
 
-            // Verify cell occupancy after activation
-            var verifyCell = hexGrid.GetCell(position);
-            Debug.Log($"[EntityFactory] VERIFY after SetActive: cell {position} IsOccupied={verifyCell?.IsOccupied}, OccupyingEntity={verifyCell?.OccupyingEntity?.Name ?? "NULL"}");
-
-            Debug.Log($"[EntityFactory] Spawned {definition.NPCName} ({definition.Type}) at {position} with ID {entityId}");
+            Debug.Log($"[EntityFactory] Spawned {definition.NPCName} ({definition.Type}) at hex {position}, world {npcObject.transform.position}");
 
             return npcController;
         }
@@ -222,14 +234,19 @@ namespace FollowMyFootsteps.Entities
                     SimulationManager.Instance.UnregisterEntity(controller);
                 }
 
-                // Clear cell occupancy
+                // Clear cell occupancy using new multi-occupant system
                 if (hexGrid != null && controller.RuntimeData != null)
                 {
                     HexCell cell = hexGrid.GetCell(controller.RuntimeData.Position);
                     if (cell != null)
                     {
-                        cell.IsOccupied = false;
-                        cell.OccupyingEntity = null;
+                        cell.RemoveOccupant(npcObject);
+                    }
+                    
+                    // Unregister from stack visualizer
+                    if (EntityStackVisualizer.Instance != null)
+                    {
+                        EntityStackVisualizer.Instance.UnregisterEntity(npcObject);
                     }
                 }
             }

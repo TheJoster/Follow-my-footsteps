@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "FollowMyFootsteps",
-        "FollowMyFootsteps.Editor"
+        "FollowMyFootsteps.Editor",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

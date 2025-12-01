@@ -47,6 +47,19 @@ namespace FollowMyFootsteps.AI
                 return;
             }
             
+            // Check if an ally is in distress (all NPC types can respond to allied distress)
+            var perception = npc.GetComponent<PerceptionComponent>();
+            if (perception != null)
+            {
+                var allyAttacker = perception.AllyAttacker;
+                if (allyAttacker != null && perception.IsValidEnemy(allyAttacker))
+                {
+                    Debug.Log($"[WanderState] {npc.EntityName} responding to ally distress! Attacker: {allyAttacker.name}");
+                    npc.GetStateMachine()?.ChangeState("AttackState");
+                    return;
+                }
+            }
+            
             Debug.Log($"[WanderState] OnUpdate for {npc.EntityName}. AP: {npc.ActionPoints}");
             
             var movement = npc.GetMovementController();

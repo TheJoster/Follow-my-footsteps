@@ -43,9 +43,8 @@ namespace FollowMyFootsteps.AI
         {
             if (waypoints.Count == 0)
             {
-                Debug.LogWarning("[PatrolState] No waypoints defined. Falling back to Idle state.");
-                
-                // Try to switch to Idle state if no waypoints
+                // No waypoints is common for NPCs without defined patrol routes
+                // Silently fall back to Idle - this is expected behavior
                 NPCController npc = entity as NPCController;
                 if (npc != null)
                 {
@@ -68,10 +67,32 @@ namespace FollowMyFootsteps.AI
                 return;
             }
             
+            // Check if an ally is in distress (all NPC types can respond to allied distress)
+            var perception = npc.GetComponent<PerceptionComponent>();
+            if (perception != null)
+            {
+                // Check if there's an attacker targeting our allies
+                var allyAttacker = perception.AllyAttacker;
+                var allyToProtect = perception.AllyToProtect;
+                
+                if (allyAttacker != null)
+                {
+                    bool isValid = perception.IsValidEnemy(allyAttacker);
+                    Debug.Log($"[PatrolState] {npc.EntityName} checking ally distress - Attacker: {allyAttacker.name}, " +
+                             $"AllyToProtect: {(allyToProtect != null ? allyToProtect.name : "null")}, IsValidEnemy: {isValid}");
+                    
+                    if (isValid)
+                    {
+                        Debug.Log($"[PatrolState] {npc.EntityName} responding to ally distress! Transitioning to AttackState");
+                        npc.GetStateMachine()?.ChangeState("AttackState");
+                        return;
+                    }
+                }
+            }
+            
             // Check if NPC should attack (hostile NPCs detect player)
             if (npc.Definition != null && npc.Definition.Type == NPCType.Hostile)
             {
-                var perception = npc.GetComponent<PerceptionComponent>();
                 if (perception != null)
                 {
                     // Force scan for targets

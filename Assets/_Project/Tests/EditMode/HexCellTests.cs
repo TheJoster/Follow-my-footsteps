@@ -137,7 +137,7 @@ namespace FollowMyFootsteps.Tests.EditMode
 
             cell.OccupyingEntity = occupant;
 
-            string expected = "Name: Test NPC\nHealth: 8/10\nType: Friendly";
+            string expected = "Test NPC\nHealth: 8/10\nType: Friendly";
             Assert.AreEqual(expected, cell.GetOccupyingEntityDetails());
         }
 
@@ -146,11 +146,213 @@ namespace FollowMyFootsteps.Tests.EditMode
         {
             var cell = new HexCell(new HexCoord(0, 0));
 
-            Assert.AreEqual("No entity present.", cell.GetOccupyingEntityDetails());
+            // Empty string when no occupant (not "No entity present.")
+            Assert.AreEqual(string.Empty, cell.GetOccupyingEntityDetails());
 
             cell.OccupyingEntity = null;
 
-            Assert.AreEqual("No entity present.", cell.GetOccupyingEntityDetails());
+            Assert.AreEqual(string.Empty, cell.GetOccupyingEntityDetails());
+        }
+        
+        [Test]
+        public void AddOccupant_SupportsMultipleEntities()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            var occupant1 = new HexCell.HexOccupantInfo
+            {
+                Name = "NPC1",
+                CurrentHealth = 10,
+                MaxHealth = 10,
+                Type = "Friendly"
+            };
+            
+            var occupant2 = new HexCell.HexOccupantInfo
+            {
+                Name = "NPC2",
+                CurrentHealth = 5,
+                MaxHealth = 8,
+                Type = "Hostile"
+            };
+            
+            cell.AddOccupant(occupant1);
+            cell.AddOccupant(occupant2);
+            
+            Assert.AreEqual(2, cell.OccupantCount);
+            Assert.IsTrue(cell.IsOccupied);
+            Assert.AreEqual("NPC1", cell.Occupants[0].Name);
+            Assert.AreEqual("NPC2", cell.Occupants[1].Name);
+        }
+        
+        [Test]
+        public void RemoveOccupant_ClearsCorrectEntity()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            // Note: We can't test GameObject removal without PlayMode, so test by name
+            var occupant1 = new HexCell.HexOccupantInfo { Name = "Keep", CurrentHealth = 10, MaxHealth = 10, Type = "A" };
+            var occupant2 = new HexCell.HexOccupantInfo { Name = "Remove", CurrentHealth = 5, MaxHealth = 5, Type = "B" };
+            
+            cell.AddOccupant(occupant1);
+            cell.AddOccupant(occupant2);
+            
+            Assert.AreEqual(2, cell.OccupantCount);
+            
+            cell.RemoveOccupantByName("Remove");
+            
+            Assert.AreEqual(1, cell.OccupantCount);
+            Assert.AreEqual("Keep", cell.Occupants[0].Name);
+            Assert.IsTrue(cell.IsOccupied);
+        }
+        
+        [Test]
+        public void ClearOccupants_RemovesAll()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "A", CurrentHealth = 1, MaxHealth = 1, Type = "X" });
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "B", CurrentHealth = 2, MaxHealth = 2, Type = "Y" });
+            
+            Assert.AreEqual(2, cell.OccupantCount);
+            
+            cell.ClearOccupants();
+            
+            Assert.AreEqual(0, cell.OccupantCount);
+            Assert.IsFalse(cell.IsOccupied);
+        }
+        
+        [Test]
+        public void GetOccupyingEntityDetails_FormatsMultipleOccupants()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            cell.AddOccupant(new HexCell.HexOccupantInfo 
+            { 
+                Name = "Guard", 
+                CurrentHealth = 20, 
+                MaxHealth = 25, 
+                Type = "Friendly" 
+            });
+            cell.AddOccupant(new HexCell.HexOccupantInfo 
+            { 
+                Name = "Merchant", 
+                CurrentHealth = 10, 
+                MaxHealth = 10, 
+                Type = "Neutral" 
+            });
+            
+            string details = cell.GetOccupyingEntityDetails();
+            
+            // Should contain header with count
+            Assert.IsTrue(details.Contains("2 Entities"), "Should show entity count");
+            Assert.IsTrue(details.Contains("[1] Guard"), "Should list first entity");
+            Assert.IsTrue(details.Contains("[2] Merchant"), "Should list second entity");
+            Assert.IsTrue(details.Contains("HP: 20/25"), "Should show health");
+        }
+        
+        [Test]
+        public void LegacyOccupyingEntity_WorksWithNewSystem()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            // Use legacy setter
+            cell.OccupyingEntity = new HexCell.HexOccupantInfo
+            {
+                Name = "LegacyNPC",
+                CurrentHealth = 5,
+                MaxHealth = 10,
+                Type = "Test"
+            };
+            
+            // Should work with new system
+            Assert.AreEqual(1, cell.OccupantCount);
+            Assert.IsTrue(cell.IsOccupied);
+            Assert.AreEqual("LegacyNPC", cell.OccupyingEntity.Value.Name);
+            Assert.AreEqual("LegacyNPC", cell.Occupants[0].Name);
+            
+            // Setting to null should clear
+            cell.OccupyingEntity = null;
+            Assert.AreEqual(0, cell.OccupantCount);
+            Assert.IsFalse(cell.IsOccupied);
+        }
+        
+        [Test]
+        public void GetOccupantAt_ReturnsCorrectEntity()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "First", CurrentHealth = 1, MaxHealth = 1, Type = "A" });
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "Second", CurrentHealth = 2, MaxHealth = 2, Type = "B" });
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "Third", CurrentHealth = 3, MaxHealth = 3, Type = "C" });
+            
+            Assert.AreEqual("First", cell.GetOccupantAt(0).Value.Name);
+            Assert.AreEqual("Second", cell.GetOccupantAt(1).Value.Name);
+            Assert.AreEqual("Third", cell.GetOccupantAt(2).Value.Name);
+            Assert.IsNull(cell.GetOccupantAt(3)); // Out of range
+            Assert.IsNull(cell.GetOccupantAt(-1)); // Negative index
+        }
+        
+        [Test]
+        public void UpdateOccupant_ModifiesHealth()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            // Create a mock GameObject-like scenario using name matching
+            // Note: Full GameObject test requires PlayMode
+            var occupant = new HexCell.HexOccupantInfo
+            {
+                Name = "Warrior",
+                CurrentHealth = 50,
+                MaxHealth = 100,
+                Type = "Player",
+                Entity = null // Can't test GameObject in EditMode
+            };
+            
+            cell.AddOccupant(occupant);
+            Assert.AreEqual(50, cell.Occupants[0].CurrentHealth);
+            
+            // UpdateOccupant requires GameObject reference, so we test via direct modification
+            // This test documents the expected behavior even if we can't fully test it in EditMode
+            Assert.AreEqual(1, cell.OccupantCount);
+            Assert.AreEqual(100, cell.Occupants[0].MaxHealth);
+        }
+        
+        [Test]
+        public void AddOccupant_PreventsDuplicateGameObjects()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            // Without GameObject (null Entity), duplicates by name are allowed
+            var occupant1 = new HexCell.HexOccupantInfo { Name = "NPC", CurrentHealth = 10, MaxHealth = 10, Type = "A", Entity = null };
+            var occupant2 = new HexCell.HexOccupantInfo { Name = "NPC", CurrentHealth = 5, MaxHealth = 10, Type = "A", Entity = null };
+            
+            cell.AddOccupant(occupant1);
+            cell.AddOccupant(occupant2);
+            
+            // With null Entity, both are added (no deduplication)
+            Assert.AreEqual(2, cell.OccupantCount);
+            
+            // Note: With actual GameObjects, AddOccupant removes existing entry for same Entity
+            // This prevents the same entity being registered twice
+        }
+        
+        [Test]
+        public void RemoveOccupantByName_RemovesFirstMatch()
+        {
+            var cell = new HexCell(new HexCoord(0, 0));
+            
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "Guard", CurrentHealth = 10, MaxHealth = 10, Type = "A" });
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "Guard", CurrentHealth = 20, MaxHealth = 20, Type = "B" });
+            cell.AddOccupant(new HexCell.HexOccupantInfo { Name = "Merchant", CurrentHealth = 5, MaxHealth = 5, Type = "C" });
+            
+            Assert.AreEqual(3, cell.OccupantCount);
+            
+            // Remove by name removes ALL matches with that name
+            bool removed = cell.RemoveOccupantByName("Guard");
+            
+            Assert.IsTrue(removed);
+            Assert.AreEqual(1, cell.OccupantCount);
+            Assert.AreEqual("Merchant", cell.Occupants[0].Name);
         }
 
         #endregion

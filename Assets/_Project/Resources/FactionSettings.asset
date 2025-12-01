@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5472e1e86284d2d46afb6796b5d6d7a2, type: 3}
+  m_Script: {fileID: 0}
   m_Name: FactionSettings
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: FollowMyFootsteps:FollowMyFootsteps.Entities:FactionSettings
   factionRelationships:
   - SourceFaction: 1
     Relationships:

@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Entities;
+using FollowMyFootsteps.Combat;
 
 namespace FollowMyFootsteps.AI
 {
@@ -47,7 +48,7 @@ namespace FollowMyFootsteps.AI
         [SerializeField] private float threatMemoryDuration = 10f;
         
         [Header("Faction System")]
-        [Tooltip("Reference to global faction settings (optional - if null, uses NPCType-based logic)")]
+        [Tooltip("Reference to global faction settings (optional - if null, uses FactionAlertManager's settings)")]
         [SerializeField] private FactionSettings factionSettings;
         
         [Header("Debug")]
@@ -58,8 +59,11 @@ namespace FollowMyFootsteps.AI
         [Tooltip("Enable responding to allied distress calls")]
         [SerializeField] private bool respondToDistressCalls = true;
         
-        [Tooltip("Range to hear distress calls from allies (in hex cells). Set to 0 to use vision range.")]
-        [SerializeField] private int hearingRange = 10;
+        [Tooltip("Local override for hearing range (in hex cells). Set to 0 to use NPCDefinition or global default.")]
+        [SerializeField] private int hearingRangeOverride = 0;
+        
+        [Tooltip("Local override for sound level range multiplier. Set to 0 to use NPCDefinition or global default.")]
+        [SerializeField] [Range(0f, 2f)] private float soundLevelRangeMultiplierOverride = 0f;
         
         [Tooltip("Priority bonus for protecting weak allies (0-100)")]
         [SerializeField] private float protectWeakBonus = 50f;
@@ -81,6 +85,13 @@ namespace FollowMyFootsteps.AI
         // Allied protection tracking
         private GameObject currentAllyToProtect;
         private GameObject currentAllyAttacker;
+        
+        // Distress investigation tracking (for hearing-only detection)
+        private bool hasDistressToInvestigate;
+        private Vector3 currentDistressInvestigationTarget;
+        private GameObject investigatedDistressVictim;
+        private GameObject investigatedDistressAttacker;
+        private bool investigatedDistressIsAlly;
         
         /// <summary>
         /// Tracks threat information for a specific attacker
@@ -137,6 +148,62 @@ namespace FollowMyFootsteps.AI
         public GameObject AllyAttacker => currentAllyAttacker;
 
         /// <summary>
+        /// Check if there's a distress call to investigate (heard but not yet seen)
+        /// </summary>
+        public bool HasDistressToInvestigate => hasDistressToInvestigate;
+        
+        /// <summary>
+        /// Get the world position of the distress call to investigate
+        /// </summary>
+        public Vector3 DistressInvestigationTarget => currentDistressInvestigationTarget;
+        
+        /// <summary>
+        /// Check if the investigated distress is from an ally (known after investigation or if faction is obvious)
+        /// </summary>
+        public bool IsInvestigatedDistressFromAlly => investigatedDistressIsAlly;
+        
+        /// <summary>
+        /// Called when NPC arrives at investigation target - determines if victim is friend or foe.
+        /// Returns true if the victim is an ally and protection should begin.
+        /// </summary>
+        public bool CompleteDistressInvestigation()
+        {
+            if (!hasDistressToInvestigate) return false;
+            
+            hasDistressToInvestigate = false;
+            
+            if (investigatedDistressIsAlly && investigatedDistressVictim != null && investigatedDistressAttacker != null)
+            {
+                // It's an ally! Begin protection
+                currentAllyToProtect = investigatedDistressVictim;
+                currentAllyAttacker = investigatedDistressAttacker;
+                
+                // Now register the attacker as a threat
+                // Use a default threat level - the actual threat assessment happens in RegisterAllyAttacker
+                RegisterAllyAttacker(investigatedDistressAttacker, investigatedDistressVictim, 0, 50f);
+                
+                Debug.Log($"[PerceptionComponent] {gameObject.name} investigated distress - {investigatedDistressVictim.name} IS an ally! Moving to protect.");
+                return true;
+            }
+            else
+            {
+                // Not an ally - ignore (or could be used for other behavior like running away)
+                Debug.Log($"[PerceptionComponent] {gameObject.name} investigated distress - {investigatedDistressVictim?.name ?? "unknown"} is NOT an ally. Ignoring.");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Clear the current distress investigation without acting on it
+        /// </summary>
+        public void ClearDistressInvestigation()
+        {
+            hasDistressToInvestigate = false;
+            investigatedDistressVictim = null;
+            investigatedDistressAttacker = null;
+        }
+
+        /// <summary>
         /// Get the primary target
         /// </summary>
         public GameObject PrimaryTarget => primaryTarget;
@@ -170,10 +237,11 @@ namespace FollowMyFootsteps.AI
         
         private void OnEnable()
         {
-            // Subscribe to distress calls
-            if (FactionAlertManager.Instance != null && respondToDistressCalls)
+            // Subscribe to distress calls (Instance getter auto-creates if needed)
+            if (respondToDistressCalls)
             {
                 FactionAlertManager.Instance.OnDistressCall += OnAllyDistressCall;
+                Debug.Log($"[PerceptionComponent] {gameObject.name} subscribed to distress calls (hearingRange: {GetEffectiveHearingRange()} hexes)");
             }
         }
         
@@ -184,6 +252,24 @@ namespace FollowMyFootsteps.AI
             {
                 FactionAlertManager.Instance.OnDistressCall -= OnAllyDistressCall;
             }
+        }
+        
+        /// <summary>
+        /// Gets the effective FactionSettings to use for relationship checks.
+        /// Priority: Local override → FactionAlertManager global → null (fallback to NPCType logic)
+        /// </summary>
+        private FactionSettings GetEffectiveFactionSettings()
+        {
+            // Local override takes priority
+            if (factionSettings != null)
+                return factionSettings;
+            
+            // Use global from FactionAlertManager
+            if (FactionAlertManager.Instance != null && FactionAlertManager.Instance.FactionSettings != null)
+                return FactionAlertManager.Instance.FactionSettings;
+            
+            // Fall back to null (will use NPCType-based logic)
+            return null;
         }
 
         private void Update()
@@ -223,49 +309,83 @@ namespace FollowMyFootsteps.AI
             
             Faction myFaction = GetMyFaction();
             
-            // Check if victim is an ally
+            // Check if victim is an ally using effective faction settings
             bool isAlly = false;
-            if (factionSettings != null)
+            var effectiveSettings = GetEffectiveFactionSettings();
+            if (effectiveSettings != null)
             {
-                isAlly = factionSettings.IsFriendly(myFaction, distressCall.VictimFaction) ||
+                isAlly = effectiveSettings.IsFriendly(myFaction, distressCall.VictimFaction) ||
                          myFaction == distressCall.VictimFaction;
             }
             else
             {
+                // Fallback: same faction only (no cross-faction protection without FactionSettings)
                 isAlly = myFaction == distressCall.VictimFaction;
             }
             
-            if (!isAlly) return;
+            if (!isAlly)
+            {
+                Debug.Log($"[PerceptionComponent] {gameObject.name} ({myFaction}) ignoring distress - {distressCall.Victim.name} ({distressCall.VictimFaction}) is not an ally");
+                return;
+            }
             
             // Don't respond to our own distress
             if (distressCall.Victim == gameObject) return;
             
-            // Check distance - use hearing range (or fall back to vision range if not set)
-            int effectiveHearingRange = hearingRange > 0 ? hearingRange : visionRange;
-            float maxHearingDistance = effectiveHearingRange * HexMetrics.outerRadius * 2f;
-            float distance = Vector3.Distance(transform.position, distressCall.Position);
-            if (distance > maxHearingDistance) return;
+            // Check distance in hex cells with sound-level range extension
+            int baseHearingRange = GetEffectiveHearingRange();
+            int effectiveHearingRange = CalculateEffectiveHearingRange(baseHearingRange, distressCall.SoundLevel);
+            
+            HexCoord myHexPos = HexMetrics.WorldToHexCoord(transform.position);
+            HexCoord distressHexPos = HexMetrics.WorldToHexCoord(distressCall.Position);
+            int hexDistance = HexCoord.Distance(myHexPos, distressHexPos);
+            
+            if (hexDistance > effectiveHearingRange)
+            {
+                Debug.Log($"[PerceptionComponent] {gameObject.name} too far to hear distress from {distressCall.Victim.name}: " +
+                         $"hexDistance={hexDistance}, effectiveRange={effectiveHearingRange} hexes (base={baseHearingRange}, soundLevel={distressCall.SoundLevel:F0})");
+                return;
+            }
             
             // Register the attacker as a threat (attacking our ally)
             RegisterAllyAttacker(distressCall.Attacker, distressCall.Victim, 
                                 distressCall.DamageReceived, distressCall.VictimThreatLevel);
             
+            // IMPORTANT: Set current ally attacker immediately so states can react
+            // This is critical for turn-based gameplay where NPCs need to respond on their turn
+            currentAllyAttacker = distressCall.Attacker;
+            currentAllyToProtect = distressCall.Victim;
+            
+            Debug.Log($"[PerceptionComponent] {gameObject.name} registered ally attacker: {distressCall.Attacker.name} " +
+                     $"(attacking {distressCall.Victim.name})");
+            
             // Determine if we can see or just hear the distress
-            float visionRangeWorld = visionRange * HexMetrics.outerRadius * 2f;
-            bool canSeeDistress = distance <= visionRangeWorld;
+            bool canSeeDistress = hexDistance <= visionRange;
+            
+            // Spawn response visual popup
+            if (AlertPopupPool.Instance != null)
+            {
+                if (canSeeDistress)
+                {
+                    AlertPopupPool.Instance.SpawnVisionResponsePopup(transform.position);
+                }
+                else
+                {
+                    AlertPopupPool.Instance.SpawnSoundResponsePopup(transform.position);
+                }
+            }
             
             string hearingType = canSeeDistress ? "saw" : "heard";
             Debug.Log($"[PerceptionComponent] {gameObject.name} {hearingType} distress call from {distressCall.Victim.name}! " +
                      $"Attacker: {distressCall.Attacker.name}, Sound Level: {distressCall.SoundLevel:F1}, " +
                      $"Victim Health: {distressCall.VictimHealthPercent:P0}");
         }
-        }
         
         /// <summary>
         /// Periodically check for allies in distress and update protection targets.
         /// Uses two-tier system:
-        /// - Vision range: Can assess priority (protect weakest ally)
-        /// - Hearing range: Responds to loudest call (lowest health = most desperate)
+        /// - Vision range: Can SEE who needs help, filters by faction (only help allies)
+        /// - Hearing range: Can only HEAR screams, NO faction filter (investigate first, then determine friend/foe)
         /// </summary>
         private void CheckForAlliesInDistress()
         {
@@ -275,37 +395,97 @@ namespace FollowMyFootsteps.AI
             
             Faction myFaction = GetMyFaction();
             
-            // Calculate ranges in world units
-            float visionRangeWorld = visionRange * HexMetrics.outerRadius * 2f;
-            int effectiveHearingRange = hearingRange > 0 ? hearingRange : visionRange;
-            float hearingRangeWorld = effectiveHearingRange * HexMetrics.outerRadius * 2f;
+            // Get effective hearing range from hierarchy
+            int effectiveHearingRange = GetEffectiveHearingRange();
+            
+            // Get effective faction settings from hierarchy
+            var effectiveSettings = GetEffectiveFactionSettings();
             
             FactionAlertManager.DistressCall distressCall = null;
+            bool canSeeDistress = false;
             
-            // First, check vision range - we can see who needs help most (assess priority)
+            // First, check vision range - we can SEE who needs help (faction-filtered, priority-based)
             distressCall = FactionAlertManager.Instance.GetHighestPriorityDistressCall(
-                myFaction, transform.position, factionSettings, visionRangeWorld, gameObject);
+                myFaction, transform.position, effectiveSettings, visionRange, gameObject);
             
-            // If nothing in vision range, check hearing range - respond to loudest call
-            if (distressCall == null && hearingRangeWorld > visionRangeWorld)
+            if (distressCall != null)
+            {
+                canSeeDistress = true;
+            }
+            // If nothing in vision range, check hearing range - just hear the loudest scream
+            // NO faction filtering! We don't know if it's friend or foe until we investigate
+            else if (effectiveHearingRange > visionRange)
             {
                 distressCall = FactionAlertManager.Instance.GetLoudestDistressCall(
-                    myFaction, transform.position, factionSettings, hearingRangeWorld, gameObject);
+                    transform.position, effectiveHearingRange, gameObject);
             }
             
             if (distressCall != null)
             {
-                currentAllyToProtect = distressCall.Victim;
-                currentAllyAttacker = distressCall.Attacker;
+                // Check if the victim is actually an ally (for determining response behavior)
+                bool isAlly = false;
+                if (effectiveSettings != null)
+                {
+                    isAlly = effectiveSettings.IsFriendly(myFaction, distressCall.VictimFaction) ||
+                             myFaction == distressCall.VictimFaction;
+                }
+                else
+                {
+                    isAlly = myFaction == distressCall.VictimFaction;
+                }
                 
-                // Make sure attacker is registered as a threat
-                RegisterAllyAttacker(distressCall.Attacker, distressCall.Victim,
-                                    distressCall.DamageReceived, distressCall.VictimThreatLevel);
+                if (canSeeDistress)
+                {
+                    // We can SEE the distress - we know it's an ally (already filtered)
+                    currentAllyToProtect = distressCall.Victim;
+                    currentAllyAttacker = distressCall.Attacker;
+                    
+                    // Register the attacker as a threat
+                    RegisterAllyAttacker(distressCall.Attacker, distressCall.Victim,
+                                        distressCall.DamageReceived, distressCall.VictimThreatLevel);
+                    
+                    Debug.Log($"[PerceptionComponent] {gameObject.name} SAW ally {distressCall.Victim.name} in distress - moving to protect!");
+                }
+                else
+                {
+                    // We can only HEAR the distress - investigate the location
+                    // Store as investigation target, but don't register attacker until we SEE them
+                    currentDistressInvestigationTarget = distressCall.Position;
+                    hasDistressToInvestigate = true;
+                    investigatedDistressVictim = distressCall.Victim;
+                    investigatedDistressAttacker = distressCall.Attacker;
+                    investigatedDistressIsAlly = isAlly;
+                    
+                    Debug.Log($"[PerceptionComponent] {gameObject.name} HEARD distress from {distressCall.Victim.name} at {distressCall.Position} - investigating...");
+                    
+                    // Don't set currentAllyToProtect yet - we need to investigate first
+                    // The AI state machine should use hasDistressToInvestigate to navigate there
+                }
             }
             else
             {
-                currentAllyToProtect = null;
-                currentAllyAttacker = null;
+                // Only clear if current attacker is gone/dead, otherwise keep tracking them
+                // This prevents clearing an attacker set via OnAllyDistressCall event
+                bool shouldClear = true;
+                
+                if (currentAllyAttacker != null)
+                {
+                    // Keep tracking if attacker is still valid and alive
+                    var attackerNpc = currentAllyAttacker.GetComponent<NPCController>();
+                    if (attackerNpc != null && attackerNpc.IsAlive)
+                    {
+                        shouldClear = false;
+                    }
+                }
+                
+                if (shouldClear)
+                {
+                    currentAllyToProtect = null;
+                    currentAllyAttacker = null;
+                }
+                
+                // Clear investigation target if no distress calls
+                hasDistressToInvestigate = false;
             }
         }
         
@@ -510,19 +690,19 @@ namespace FollowMyFootsteps.AI
         }
 
         /// <summary>
-        /// Get current hearing range (for distress calls)
+        /// Get current hearing range (for distress calls) using hierarchy
         /// </summary>
         public int GetHearingRange()
         {
-            return hearingRange > 0 ? hearingRange : visionRange;
+            return GetEffectiveHearingRange();
         }
 
         /// <summary>
-        /// Set the hearing range for distress calls
+        /// Set the local hearing range override for distress calls
         /// </summary>
         public void SetHearingRange(int range)
         {
-            hearingRange = Mathf.Max(0, range);
+            hearingRangeOverride = Mathf.Max(0, range);
         }
         
         /// <summary>
@@ -667,10 +847,11 @@ namespace FollowMyFootsteps.AI
                 return true;
             }
             
-            // Try faction-based logic first (if FactionSettings configured)
-            if (factionSettings != null)
+            // Try faction-based logic first (if FactionSettings available)
+            var effectiveSettings = GetEffectiveFactionSettings();
+            if (effectiveSettings != null)
             {
-                return IsValidEnemyByFaction(target);
+                return IsValidEnemyByFaction(target, effectiveSettings);
             }
             
             // Fallback to NPCType-based logic
@@ -695,7 +876,7 @@ namespace FollowMyFootsteps.AI
         /// <summary>
         /// Check hostility using the FactionSettings relationship matrix
         /// </summary>
-        private bool IsValidEnemyByFaction(GameObject target)
+        private bool IsValidEnemyByFaction(GameObject target, FactionSettings settings)
         {
             Faction myFaction = GetMyFaction();
             Faction targetFaction = GetTargetFaction(target);
@@ -707,7 +888,7 @@ namespace FollowMyFootsteps.AI
             }
             
             // Check faction relationship
-            bool isEnemy = factionSettings.IsEnemy(myFaction, targetFaction);
+            bool isEnemy = settings.IsEnemy(myFaction, targetFaction);
             
             if (isEnemy)
             {
@@ -982,6 +1163,69 @@ namespace FollowMyFootsteps.AI
             
             HexCoord targetCoord = HexMetrics.WorldToHex(target.transform.position);
             return HexMetrics.Distance(currentPosition, targetCoord);
+        }
+        
+        /// <summary>
+        /// Get effective hearing range using hierarchy: Local Override → NPCDefinition → Global Default → Vision Range
+        /// </summary>
+        private int GetEffectiveHearingRange()
+        {
+            // 1. Local override (PerceptionComponent)
+            if (hearingRangeOverride > 0)
+                return hearingRangeOverride;
+            
+            // 2. NPCDefinition setting
+            if (myNpcController != null && myNpcController.Definition != null && myNpcController.Definition.HearingRange > 0)
+                return myNpcController.Definition.HearingRange;
+            
+            // 3. Global default (FactionAlertManager)
+            if (FactionAlertManager.Instance != null)
+                return FactionAlertManager.Instance.DefaultHearingRange;
+            
+            // 4. Fallback to vision range
+            return visionRange;
+        }
+        
+        /// <summary>
+        /// Get effective sound level range multiplier using hierarchy: Local Override → NPCDefinition → Global Default
+        /// </summary>
+        private float GetEffectiveSoundLevelRangeMultiplier()
+        {
+            // 1. Local override (PerceptionComponent)
+            if (soundLevelRangeMultiplierOverride > 0f)
+                return soundLevelRangeMultiplierOverride;
+            
+            // 2. NPCDefinition setting
+            if (myNpcController != null && myNpcController.Definition != null && myNpcController.Definition.SoundLevelRangeMultiplier > 0f)
+                return myNpcController.Definition.SoundLevelRangeMultiplier;
+            
+            // 3. Global default (FactionAlertManager)
+            if (FactionAlertManager.Instance != null)
+                return FactionAlertManager.Instance.DefaultSoundLevelRangeMultiplier;
+            
+            // 4. Fallback
+            return 1.5f;
+        }
+        
+        /// <summary>
+        /// Calculate effective hearing range based on sound level.
+        /// Louder/more desperate cries travel further.
+        /// </summary>
+        /// <param name="baseRange">Base hearing range in hex cells</param>
+        /// <param name="soundLevel">Sound level of the distress call (0-100)</param>
+        /// <returns>Effective hearing range in hex cells</returns>
+        private int CalculateEffectiveHearingRange(int baseRange, float soundLevel)
+        {
+            // Sound level 0-100 maps to range multiplier 1.0 - soundLevelRangeMultiplier
+            // e.g., with multiplier 1.5:
+            //   - Sound level 0 (no cry) = base range × 1.0
+            //   - Sound level 50 (moderate) = base range × 1.25
+            //   - Sound level 100 (desperate scream) = base range × 1.5
+            float normalizedSound = Mathf.Clamp01(soundLevel / 100f);
+            float multiplier = GetEffectiveSoundLevelRangeMultiplier();
+            float rangeMultiplier = 1f + (multiplier - 1f) * normalizedSound;
+            
+            return Mathf.RoundToInt(baseRange * rangeMultiplier);
         }
 
         private void OnDrawGizmos()

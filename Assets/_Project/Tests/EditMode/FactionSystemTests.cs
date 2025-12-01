@@ -492,7 +492,6 @@ namespace FollowMyFootsteps.Tests
         {
             // Create weak NPC definition (low damage, low health)
             var weakNpc = ScriptableObject.CreateInstance<NPCDefinition>();
-            weakNpc.SetupDefaultValues();
             // Weak: 5 damage, 50 health
             var serializedWeak = new UnityEditor.SerializedObject(weakNpc);
             serializedWeak.FindProperty("attackDamage").intValue = 5;
@@ -501,7 +500,6 @@ namespace FollowMyFootsteps.Tests
             
             // Create strong NPC definition (high damage, high health)
             var strongNpc = ScriptableObject.CreateInstance<NPCDefinition>();
-            strongNpc.SetupDefaultValues();
             // Strong: 20 damage, 150 health
             var serializedStrong = new UnityEditor.SerializedObject(strongNpc);
             serializedStrong.FindProperty("attackDamage").intValue = 20;
@@ -524,7 +522,6 @@ namespace FollowMyFootsteps.Tests
         public void CalculateProtectionPriority_LowHealth_IncreasesProtectionPriority()
         {
             var npc = ScriptableObject.CreateInstance<NPCDefinition>();
-            npc.SetupDefaultValues();
             
             float fullHealthPriority = FactionAlertManager.CalculateProtectionPriority(npc, 1.0f);
             float halfHealthPriority = FactionAlertManager.CalculateProtectionPriority(npc, 0.5f);
@@ -543,7 +540,6 @@ namespace FollowMyFootsteps.Tests
         {
             // Create Friendly NPC
             var friendlyNpc = ScriptableObject.CreateInstance<NPCDefinition>();
-            friendlyNpc.SetupDefaultValues();
             var serializedFriendly = new UnityEditor.SerializedObject(friendlyNpc);
             serializedFriendly.FindProperty("npcType").enumValueIndex = (int)NPCType.Friendly;
             serializedFriendly.FindProperty("attackDamage").intValue = 10;
@@ -552,7 +548,6 @@ namespace FollowMyFootsteps.Tests
             
             // Create Hostile NPC with same stats
             var hostileNpc = ScriptableObject.CreateInstance<NPCDefinition>();
-            hostileNpc.SetupDefaultValues();
             var serializedHostile = new UnityEditor.SerializedObject(hostileNpc);
             serializedHostile.FindProperty("npcType").enumValueIndex = (int)NPCType.Hostile;
             serializedHostile.FindProperty("attackDamage").intValue = 10;
@@ -593,7 +588,7 @@ namespace FollowMyFootsteps.Tests
                 Faction.Guards, 
                 Vector3.zero, 
                 factionSettings,
-                visionRange: 10f);
+                visionRangeHexes: 10);
             
             Assert.IsNull(call);
         }
@@ -601,11 +596,10 @@ namespace FollowMyFootsteps.Tests
         [Test]
         public void GetLoudestDistressCall_ReturnsNull_WhenNoDistressCalls()
         {
+            // New signature: no faction filtering for hearing range
             var call = alertManager.GetLoudestDistressCall(
-                Faction.Guards, 
                 Vector3.zero, 
-                factionSettings,
-                hearingRange: 20f);
+                hearingRangeHexes: 20);
             
             Assert.IsNull(call);
         }
@@ -737,6 +731,46 @@ namespace FollowMyFootsteps.Tests
         {
             // Should not throw
             Assert.DoesNotThrow(() => alertManager.ClearDistressCallsForAttacker(null));
+        }
+        
+        #endregion
+        
+        #region Hearing Range (No Faction Filter) Tests
+        
+        [Test]
+        public void GetAllDistressCallsInRange_ReturnsEmpty_WhenNoDistressCalls()
+        {
+            var calls = alertManager.GetAllDistressCallsInRange(
+                Vector3.zero, 
+                rangeInHexes: 20);
+            
+            Assert.IsNotNull(calls);
+            Assert.AreEqual(0, calls.Count);
+        }
+        
+        [Test]
+        public void GetLoudestDistressCall_NoFactionFilter_ReturnsNull_WhenNoCalls()
+        {
+            // Hearing range method should not require faction parameters
+            var call = alertManager.GetLoudestDistressCall(
+                Vector3.zero, 
+                hearingRangeHexes: 20);
+            
+            Assert.IsNull(call);
+        }
+        
+        [Test]
+        public void GetHighestPriorityDistressCall_FiltersByFaction()
+        {
+            // Vision range method should require faction parameters (filters allies)
+            var call = alertManager.GetHighestPriorityDistressCall(
+                Faction.Guards, 
+                Vector3.zero, 
+                factionSettings,
+                visionRangeHexes: 10);
+            
+            // Should return null when no calls exist
+            Assert.IsNull(call);
         }
         
         #endregion

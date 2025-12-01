@@ -4,6 +4,7 @@ using FollowMyFootsteps.Grid;
 using FollowMyFootsteps.Input;
 using FollowMyFootsteps.Core;
 using FollowMyFootsteps.Combat;
+using FollowMyFootsteps.UI;
 
 namespace FollowMyFootsteps.Entities
 {
@@ -103,6 +104,9 @@ namespace FollowMyFootsteps.Entities
 
         public void OnTurnStart()
         {
+            // Debug: Log position at turn start
+            Debug.Log($"[PlayerController] OnTurnStart - Position: {playerData?.Position}, Transform: {transform.position}");
+            
             // Refresh action points at start of turn
             currentActionPoints = maxActionPoints;
             Debug.Log($"[PlayerController] Turn started - Action points refreshed to {currentActionPoints}");
@@ -118,6 +122,9 @@ namespace FollowMyFootsteps.Entities
 
         public void OnTurnEnd()
         {
+            // Debug: Log position at turn end
+            Debug.Log($"[PlayerController] OnTurnEnd - Position: {playerData?.Position}, Transform: {transform.position}");
+            
             // End of turn cleanup
             Debug.Log($"[PlayerController] Turn ended - {currentActionPoints} action points remaining");
         }
@@ -219,6 +226,9 @@ namespace FollowMyFootsteps.Entities
                 }
             }
             
+            // Register cell occupancy for stacking visualization
+            RegisterCellOccupancy();
+            
             // Register with SimulationManager
             if (SimulationManager.Instance != null)
             {
@@ -229,6 +239,34 @@ namespace FollowMyFootsteps.Entities
             {
                 Debug.LogWarning("[PlayerController] SimulationManager not found - turn system will not work!");
                 Debug.Log($"[PlayerController] Playing in free-movement mode with {currentActionPoints} AP");
+            }
+        }
+        
+        /// <summary>
+        /// Registers the player with the cell occupancy system and stack visualizer.
+        /// </summary>
+        private void RegisterCellOccupancy()
+        {
+            if (hexGrid == null || playerData == null || playerDefinition == null) return;
+            
+            var cell = hexGrid.GetCell(CurrentPosition);
+            if (cell != null)
+            {
+                var occupantInfo = new HexCell.HexOccupantInfo
+                {
+                    Name = playerDefinition.PlayerName,
+                    CurrentHealth = playerData.CurrentHealth,
+                    MaxHealth = playerDefinition.MaxHealth,
+                    Type = "Player",
+                    Entity = gameObject
+                };
+                cell.AddOccupant(occupantInfo);
+                
+                // Register with stack visualizer
+                if (EntityStackVisualizer.Instance != null)
+                {
+                    EntityStackVisualizer.Instance.RegisterEntity(CurrentPosition, gameObject);
+                }
             }
         }
 
@@ -663,8 +701,43 @@ namespace FollowMyFootsteps.Entities
         /// </summary>
         private void OnMovementStep(HexCoord reachedCoord)
         {
+            // Get old position before updating
+            HexCoord oldPosition = playerData.Position;
+            
             // Update player data position
             playerData.Position = reachedCoord;
+
+            // Update cell occupancy - remove from old cell, add to new cell
+            if (hexGrid != null)
+            {
+                // Remove from old cell
+                var oldCell = hexGrid.GetCell(oldPosition);
+                if (oldCell != null)
+                {
+                    oldCell.RemoveOccupant(gameObject);
+                }
+                
+                // Add to new cell
+                var newCell = hexGrid.GetCell(reachedCoord);
+                if (newCell != null)
+                {
+                    var occupantInfo = new HexCell.HexOccupantInfo
+                    {
+                        Name = playerDefinition?.PlayerName ?? "Player",
+                        CurrentHealth = playerData.CurrentHealth,
+                        MaxHealth = playerDefinition?.MaxHealth ?? 100,
+                        Type = "Player",
+                        Entity = gameObject
+                    };
+                    newCell.AddOccupant(occupantInfo);
+                }
+                
+                // Update stack visualizer - use MoveEntity for efficiency
+                if (EntityStackVisualizer.Instance != null)
+                {
+                    EntityStackVisualizer.Instance.MoveEntity(oldPosition, reachedCoord, gameObject);
+                }
+            }
 
             // Consume action point for this cell (if SimulationManager is managing turns)
             if (SimulationManager.Instance != null)
@@ -887,9 +960,14 @@ namespace FollowMyFootsteps.Entities
                 var currentCell = hexGrid.GetCell(CurrentPosition);
                 if (currentCell != null)
                 {
-                    currentCell.IsOccupied = false;
-                    currentCell.OccupyingEntity = null;
+                    currentCell.RemoveOccupant(gameObject);
                 }
+            }
+            
+            // Unregister from stack visualizer
+            if (EntityStackVisualizer.Instance != null)
+            {
+                EntityStackVisualizer.Instance.UnregisterEntity(gameObject);
             }
 
             // TODO: Implement death behavior (respawn, game over screen, etc.)

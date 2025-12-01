@@ -133,7 +133,10 @@ namespace FollowMyFootsteps.Entities
 
             // Create player GameObject
             GameObject playerObj = new GameObject("Player");
-            playerObj.transform.SetParent(transform);
+            
+            // IMPORTANT: Do NOT parent to PlayerSpawner - PlayerSpawner has non-zero position
+            // which causes issues with world position when localPosition is reset
+            // Leave player at root of hierarchy for predictable positioning
             
             // Position player closer to camera than terrain (z = -1)
             Vector3 startWorldPos = HexMetrics.GetWorldPosition(startPosition);

@@ -77,6 +77,14 @@ namespace FollowMyFootsteps.Entities
         [Range(1, 20)]
         public int VisionRange = 5;
         
+        [Tooltip("Hearing range for distress calls (in hex cells). Set to 0 to use global default.")]
+        [Range(0, 30)]
+        public int HearingRange = 0;
+        
+        [Tooltip("Sound level range multiplier for desperate cries. Set to 0 to use global default. At 1.5, desperate NPCs can be heard 50% further.")]
+        [Range(0f, 2f)]
+        public float SoundLevelRangeMultiplier = 0f;
+        
         [Tooltip("Initial state when spawned")]
         public string InitialState = "Idle";
 
@@ -101,6 +109,8 @@ namespace FollowMyFootsteps.Entities
             if (MovementSpeed < 0.5f) MovementSpeed = 0.5f;
             if (MovementRange < 1) MovementRange = 1;
             if (VisionRange < 1) VisionRange = 1;
+            if (HearingRange < 0) HearingRange = 0;
+            if (SoundLevelRangeMultiplier < 0) SoundLevelRangeMultiplier = 0;
         }
         
         /// <summary>

@@ -32,7 +32,7 @@ namespace FollowMyFootsteps.Grid
         {
             if (grid == null)
             {
-                Debug.LogWarning("[Pathfinding] HexGrid is null");
+                // Grid not ready - return silently
                 return null;
             }
 
@@ -41,14 +41,15 @@ namespace FollowMyFootsteps.Grid
 
             if (startCell == null || goalCell == null)
             {
-                Debug.LogWarning("[Pathfinding] Start or goal cell doesn't exist");
+                // Cells not loaded yet - return silently
+                // This is normal during initialization
                 return null;
             }
 
             // Goal must be walkable
             if (goalCell.Terrain != null && !goalCell.Terrain.IsWalkable)
             {
-                Debug.LogWarning($"[Pathfinding] Goal cell has unwalkable terrain: {goalCell.Terrain.TerrainName}");
+                // Don't log - this is a common query case (hovering over water, etc.)
                 return null;
             }
 
